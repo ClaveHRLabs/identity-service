@@ -1,12 +1,43 @@
 import { logger } from '../utils/logger';
 import * as organizationRepository from '../db/organization';
+import * as setupCodeRepository from '../db/setup-code';
 import {
     OrganizationProfile,
     CreateOrganizationProfile,
     UpdateOrganizationProfile
 } from '../models/schemas/organization';
+import { AppError } from '../api/middlewares/error-handler';
 
 export class OrganizationService {
+    /**
+     * Validate that a setup code is valid and associated with the given organization ID
+     * @private
+     */
+    private async validateSetupCodeForOrganization(
+        setupCode: string,
+        organizationId: string
+    ): Promise<boolean> {
+        if (!setupCode) return false;
+
+        try {
+            const validationResult = await setupCodeRepository.validateSetupCode(setupCode);
+
+            if (!validationResult.valid || !validationResult.setupCode) {
+                return false;
+            }
+
+            // Check if the setup code is for this organization
+            return validationResult.setupCode.organization_id === organizationId;
+        } catch (error) {
+            logger.error('Error validating setup code for organization', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                setupCode,
+                organizationId
+            });
+            return false;
+        }
+    }
+
     /**
      * Create a new organization profile
      */
@@ -65,6 +96,15 @@ export class OrganizationService {
         });
 
         try {
+            // If setup code is provided, validate it for this organization
+            if (setupCode) {
+                const isValid = await this.validateSetupCodeForOrganization(setupCode, id);
+                if (!isValid) {
+                    logger.warn('Invalid setup code for organization update', { id, setupCode });
+                    throw new AppError('Invalid setup code for this organization', 403, 'FORBIDDEN');
+                }
+            }
+
             const updatedProfile = await organizationRepository.updateOrganizationProfile(id, updateData);
 
             if (updatedProfile) {
@@ -103,6 +143,15 @@ export class OrganizationService {
         });
 
         try {
+            // If setup code is provided, validate it for this organization
+            if (setupCode) {
+                const isValid = await this.validateSetupCodeForOrganization(setupCode, id);
+                if (!isValid) {
+                    logger.warn('Invalid setup code for organization deletion', { id, setupCode });
+                    throw new AppError('Invalid setup code for this organization', 403, 'FORBIDDEN');
+                }
+            }
+
             const deleted = await organizationRepository.deleteOrganizationProfile(id);
 
             if (deleted) {

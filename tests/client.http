@@ -254,7 +254,7 @@ POST {{baseUrl}}/api/setup-codes/validate
 Content-Type: application/json
 
 {
-  "code": "ABCD123456"
+  "code": "zbUDvdFHyE"
 }
 
 ### Delete Setup Code (Requires Admin Authentication)

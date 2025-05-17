@@ -3,7 +3,7 @@ import {
     OrganizationSetupCode,
     CreateSetupCode
 } from '../models/schemas/organization';
-import { generateRandomCode } from '../utils/code-generator';
+import { generateClaveSetupCode } from '../utils/code-generator';
 
 /**
  * Create a new setup code for an organization
@@ -11,8 +11,8 @@ import { generateRandomCode } from '../utils/code-generator';
 export async function createSetupCode(data: CreateSetupCode): Promise<OrganizationSetupCode> {
     const { organization_id, expiration_hours = 24, created_by } = data;
 
-    // Generate a random alphanumeric code
-    const code = generateRandomCode(10);
+    // Generate a code in the CLAVE-XXX-XXXX format
+    const code = generateClaveSetupCode();
 
     // Calculate expiration time
     const expires_at = new Date();
