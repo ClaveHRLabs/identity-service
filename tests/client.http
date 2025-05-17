@@ -2,9 +2,9 @@
 @baseUrl = http://localhost:3001
 @adminKey = your-admin-key-here
 @setupCode = ABCD123456
-@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMjU2NjVlOS0zNThkLTQxY2UtYTc0Zi04Nzc1YmE0ODFjNDkiLCJpZCI6ImYyNTY2NWU5LTM1OGQtNDFjZS1hNzRmLTg3NzViYTQ4MWM0OSIsImVtYWlsIjoibWFuaWJhYnVAZ29lc3Nvci5jb20iLCJmaXJzdE5hbWUiOiJNYW5pYmFidSIsImxhc3ROYW1lIjoiUGlwcGFsbGEiLCJyb2xlIjoiZW1wbG95ZWUiLCJyb2xlcyI6W10sInN0YXR1cyI6ImFjdGl2ZSIsIm9yZ2FuaXphdGlvbklkIjpudWxsLCJ0eXBlIjoiYWNjZXNzIiwibWV0YWRhdGEiOnt9LCJpYXQiOjE3NDc1MDYyOTksImV4cCI6MTc0NzUwOTg5OX0.j6qVu0iPCdbdoxy9lR2gF71mE8W5LMFd_M16xehdE4o
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMjU2NjVlOS0zNThkLTQxY2UtYTc0Zi04Nzc1YmE0ODFjNDkiLCJpZCI6ImYyNTY2NWU5LTM1OGQtNDFjZS1hNzRmLTg3NzViYTQ4MWM0OSIsImVtYWlsIjoibWFuaWJhYnVAZ29lc3Nvci5jb20iLCJmaXJzdE5hbWUiOiJNYW5pYmFidSIsImxhc3ROYW1lIjoiUGlwcGFsbGEiLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJyb2xlcyI6WyJjbGF2ZWhyX29wZXJhdG9yIiwic3VwZXJfYWRtaW4iXSwic3RhdHVzIjoiYWN0aXZlIiwib3JnYW5pemF0aW9uSWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtYTAwMC0wMDAwMDAwMDAwMDEiLCJ0eXBlIjoiYWNjZXNzIiwibWV0YWRhdGEiOnt9LCJhZGRpdGlvbmFsRGF0YSI6e30sImlhdCI6MTc0NzUwOTIwMCwiZXhwIjoxNzQ3NTEyODAwfQ.Vxob2774EOX4qdfTTvhfFwAjLgx34TarX31nC4YE-Bw
 
-@refreshToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMjU2NjVlOS0zNThkLTQxY2UtYTc0Zi04Nzc1YmE0ODFjNDkiLCJpZCI6ImYyNTY2NWU5LTM1OGQtNDFjZS1hNzRmLTg3NzViYTQ4MWM0OSIsImVtYWlsIjoibWFuaWJhYnVAZ29lc3Nvci5jb20iLCJmaXJzdE5hbWUiOiJNYW5pYmFidSIsImxhc3ROYW1lIjoiUGlwcGFsbGEiLCJyb2xlIjoiZW1wbG95ZWUiLCJvcmdhbml6YXRpb25JZCI6bnVsbCwidHlwZSI6InJlZnJlc2giLCJpYXQiOjE3NDc1MDU4MjksImV4cCI6MTc0ODExMDYyOX0.BGL1dsuLLleIgP7McafQePHyaSaaC-V--6voPYcoBAU
+@refreshToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMjU2NjVlOS0zNThkLTQxY2UtYTc0Zi04Nzc1YmE0ODFjNDkiLCJpZCI6ImYyNTY2NWU5LTM1OGQtNDFjZS1hNzRmLTg3NzViYTQ4MWM0OSIsImVtYWlsIjoibWFuaWJhYnVAZ29lc3Nvci5jb20iLCJmaXJzdE5hbWUiOiJNYW5pYmFidSIsImxhc3ROYW1lIjoiUGlwcGFsbGEiLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJvcmdhbml6YXRpb25JZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC1hMDAwLTAwMDAwMDAwMDAwMSIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzQ3NTA5MjAwLCJleHAiOjE3NDgxMTQwMDB9.fdoesNrnZWttetAlIcRVFYP3LVb4yR7LkDeU1z3E59M
 
 ### Health Check
 GET {{baseUrl}}/health
@@ -19,13 +19,14 @@ Accept: application/json
 ### Create User
 POST {{baseUrl}}/api/users
 Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
 {
   "email": "john.doe@example.com",
   "first_name": "John",
   "last_name": "Doe",
   "display_name": "John Doe",
-  "organization_id": "d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e"
+  "organization_id": "cca31b6a-717c-4a1a-88c1-ef2b9a3c4c6c"
 }
 
 ### Get Current User
@@ -33,25 +34,29 @@ GET {{baseUrl}}/api/users/me
 Authorization: Bearer {{accessToken}}
 
 ### Get User by ID
-GET {{baseUrl}}/api/users/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+GET {{baseUrl}}/api/users/f25665e9-358d-41ce-a74f-8775ba481c49
 Accept: application/json
+Authorization: Bearer {{accessToken}}
 
 ### Update User
-PUT {{baseUrl}}/api/users/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+PUT {{baseUrl}}/api/users/f25665e9-358d-41ce-a74f-8775ba481c49
 Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
 {
-  "first_name": "Johnny",
-  "last_name": "Doe",
-  "display_name": "Johnny Doe"
+  "first_name": "Manibabu",
+  "last_name": "Pippalla",
+  "display_name": "Mani"
 }
 
 ### Delete User
-DELETE {{baseUrl}}/api/users/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+DELETE {{baseUrl}}/api/users/f25665e9-358d-41ce-a74f-8775ba481c49
+Authorization: Bearer {{accessToken}}
 
 ### List Users
-GET {{baseUrl}}/api/users?organization_id=d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e&status=active&limit=10&offset=0
+GET {{baseUrl}}/api/users?organization_id=00000000-0000-4000-a000-000000000001&status=active&limit=10&offset=0
 Accept: application/json
+Authorization: Bearer {{accessToken}}
 
 ### ===== AUTHENTICATION =====
 
@@ -68,7 +73,7 @@ POST {{baseUrl}}/api/auth/google
 Content-Type: application/json
 
 {
-  "code": "4/0AUJR-x7_fQHmdUSFOzvoGe4wrS8oBobXDH01yhSzoDD34eY25L-W2rXMoTRGE9ctUTsrzA",
+  "code": "4/0AUJR-x7EElkM6Ydv09iVdtHtGluCo6WXGvmwqBBVGtB3peyitRQQmJOAOkIzfP9Vvn-D3g",
   "redirect_uri": "http://localhost:3001/api/auth/callback/google",
   "state": "randomid"
 }
@@ -114,7 +119,7 @@ POST {{baseUrl}}/api/auth/magic-link
 Content-Type: application/json
 
 {
-  "email": "manibabu.iitkgp@gmail.com",
+  "email": "user@example.com",
   "redirect_uri": "http://localhost:3001/auth/callback"
 }
 
@@ -126,12 +131,20 @@ Content-Type: application/json
   "token": "a1b2c3d4e5f6g7h8i9j0"
 }
 
-### Refresh Token
+### Refresh Token - Using JWT Refresh Token
 POST {{baseUrl}}/api/auth/refresh-token
 Content-Type: application/json
 
 {
   "refresh_token": "{{refreshToken}}"
+}
+
+### Refresh Token - Using Database Refresh Token
+POST {{baseUrl}}/api/auth/refresh-token
+Content-Type: application/json
+
+{
+  "refresh_token": {{refreshToken}}
 }
 
 ### Logout
@@ -148,6 +161,7 @@ Content-Type: application/json
 ### Create Organization Profile
 POST {{baseUrl}}/api/organizations
 Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 # Optional: Include setup code if you have one
 # x-setup-code: {{setupCode}}
 
@@ -164,14 +178,16 @@ Content-Type: application/json
 }
 
 ### Get Organization Profile
-GET {{baseUrl}}/api/organizations/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+GET {{baseUrl}}/api/organizations/cca31b6a-717c-4a1a-88c1-ef2b9a3c4c6c
 Accept: application/json
+Authorization: Bearer {{accessToken}}
 # Optional: Include setup code if you have one
 # x-setup-code: {{setupCode}}
 
 ### Update Organization Profile
-PUT {{baseUrl}}/api/organizations/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+PUT {{baseUrl}}/api/organizations/cca31b6a-717c-4a1a-88c1-ef2b9a3c4c6c
 Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 # Optional: Include setup code if you have one
 # x-setup-code: {{setupCode}}
 
@@ -182,26 +198,27 @@ Content-Type: application/json
 }
 
 ### Delete Organization Profile
-DELETE {{baseUrl}}/api/organizations/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+DELETE {{baseUrl}}/api/organizations/cca31b6a-717c-4a1a-88c1-ef2b9a3c4c6c
+Authorization: Bearer {{accessToken}}
 # Optional: Include setup code if you have one
 # x-setup-code: {{setupCode}}
 
 ### List Organization Profiles
 GET {{baseUrl}}/api/organizations?status=active&subscription_tier=basic&limit=10&offset=0
 Accept: application/json
+Authorization: Bearer {{accessToken}}
 # Optional: Include setup code if you have one
 # x-setup-code: {{setupCode}}
 
 ### ===== ORGANIZATION SETUP CODES =====
 
-### Create Setup Code (Requires Admin Authentication)
-# The admin key is required, and admin name will be automatically captured
+### Create Setup Code with Organization ID (Requires Admin Authentication)
 POST {{baseUrl}}/api/setup-codes
 Content-Type: application/json
-x-clavehr-admin-key: {{adminKey}}
+Authorization: Bearer {{accessToken}}
 
 {
-  "organization_id": "d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e",
+  "organization_name": "acme-org",
   "expiration_hours": 48,
   "data": {
     "team_name": "HR Team",
@@ -209,9 +226,25 @@ x-clavehr-admin-key: {{adminKey}}
   }
 }
 
+### Create Setup Code with Organization Name (Requires Admin Authentication)
+### This will find or create the organization by name
+POST {{baseUrl}}/api/setup-codes
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "organization_name": "Acme Org",
+  "expiration_hours": 48,
+  "data": {
+    "team_name": "Engineering Team",
+    "welcome_message": "Welcome to the ClaveHR engineering team!"
+  }
+}
+
 ### Get Organization Setup Codes
-GET {{baseUrl}}/api/organizations/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e/setup-codes?includeUsed=false
+GET {{baseUrl}}/api/organizations/cca31b6a-717c-4a1a-88c1-ef2b9a3c4c6c/setup-codes?includeUsed=false
 Accept: application/json
+Authorization: Bearer {{accessToken}}
 # Optional: Include setup code if you have one
 # x-setup-code: {{setupCode}}
 
@@ -226,7 +259,7 @@ Content-Type: application/json
 
 ### Delete Setup Code (Requires Admin Authentication)
 DELETE {{baseUrl}}/api/setup-codes/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
-x-clavehr-admin-key: {{adminKey}}
+Authorization: Bearer {{accessToken}}
 
 ### ===== EXAMPLE: Using organization APIs with setup code =====
 
@@ -241,3 +274,10 @@ x-setup-code: {{setupCode}}
   "size": "10-50",
   "country": "Canada"
 }
+
+### ===== ClaveHR ORGANIZATION SPECIFIC =====
+
+### Get ClaveHR Organization Profile
+GET {{baseUrl}}/api/organizations/cca31b6a-717c-4a1a-88c1-ef2b9a3c4c6c
+Accept: application/json
+Authorization: Bearer {{accessToken}}

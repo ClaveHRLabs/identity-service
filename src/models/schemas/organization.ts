@@ -60,11 +60,19 @@ export const OrganizationSetupCodeSchema = z.object({
 
 // Schema for creating a setup code
 export const CreateSetupCodeSchema = z.object({
-    organization_id: z.string().uuid(),
+    organization_id: z.string().uuid().optional(),
+    organization_name: z.string().min(2, 'Organization name must be at least 2 characters').optional(),
     expiration_hours: z.number().positive().default(24),
     data: z.record(z.any()).optional(),
-    created_by_admin: z.string().optional(),
-});
+    created_by: z.string().optional(),
+})
+    .refine(
+        data => data.organization_id !== undefined || data.organization_name !== undefined,
+        {
+            message: 'Either organization_id or organization_name must be provided',
+            path: ['organization_id']
+        }
+    );
 
 // Schema for validating a setup code
 export const ValidateSetupCodeSchema = z.object({

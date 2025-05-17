@@ -11,14 +11,34 @@ export class SetupCodeController {
 
     /**
      * Create a new organization setup code
+     * If organization_id is not provided, looks up or creates an organization by name
      */
-    async createSetupCode(req: Request, res: Response, next: NextFunction): Promise<void> {
+    async createSetupCode(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const setupCodeData = req.body;
 
             // Add user information if authenticated
             if (req.user) {
-                setupCodeData.created_by = req.user.email || 'ClaveHR Operator';
+                setupCodeData.created_by = req.user.id;
+            }
+
+            // Extract organization information
+            const organizationId = setupCodeData.organization_id;
+            const organizationName = setupCodeData.organization_name;
+
+            // Log the setup code creation attempt
+            logger.info('Creating setup code', {
+                organizationId,
+                organizationName,
+                user: req.user?.email || 'unknown'
+            });
+
+            // Validate that at least one of organization_id or organization_name is provided
+            if (!organizationId && !organizationName) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Either organization_id or organization_name must be provided'
+                });
             }
 
             const setupCode = await this.setupCodeService.createSetupCode(setupCodeData);

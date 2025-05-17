@@ -283,8 +283,6 @@ export async function userHasRole(
     if (organizationId) {
         query += ' AND ur.organization_id = $3';
         values.push(organizationId);
-    } else {
-        query += ' AND ur.organization_id IS NULL';
     }
 
     const result = await db.query(query, values);

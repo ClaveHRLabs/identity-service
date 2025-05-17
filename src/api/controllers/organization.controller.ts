@@ -91,6 +91,107 @@ export class OrganizationController {
     }
 
     /**
+     * Update organization branding (logo and colors)
+     */
+    async updateOrganizationBranding(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { id } = req.params;
+            const brandingData = req.body;
+
+            // Make sure we're only updating branding-related fields
+            const updateData = {
+                logo_url: brandingData.logo_url,
+                primary_color: brandingData.primary_color,
+                secondary_color: brandingData.secondary_color
+            };
+
+            const organization = await this.organizationService.updateOrganizationProfile(
+                id,
+                updateData,
+                req.setupCode
+            );
+
+            if (!organization) {
+                res.status(404).json({
+                    success: false,
+                    message: 'Organization not found'
+                });
+                return;
+            }
+
+            res.status(200).json({
+                success: true,
+                data: organization
+            });
+        } catch (error) {
+            logger.error('Error updating organization branding', { error, id: req.params.id });
+            next(error);
+        }
+    }
+
+    /**
+     * Complete organization setup process
+     */
+    async completeOrganizationSetup(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { id } = req.params;
+
+            // Verify organization exists
+            const organization = await this.organizationService.getOrganizationProfile(id, req.setupCode);
+
+            if (!organization) {
+                res.status(404).json({
+                    success: false,
+                    message: 'Organization not found'
+                });
+                return;
+            }
+
+            // Mark the organization as fully set up
+            // This could include any finalization steps like:
+            // - Setting the status to 'active'
+            // - Recording setup completion timestamp in metadata
+            // - Sending welcome emails
+            // - Creating default resources
+
+            const updatedOrg = await this.organizationService.updateOrganizationProfile(
+                id,
+                {
+                    status: 'active',
+                    // Store setup completion info in the config field which is JSONB
+                    config: {
+                        ...organization.config,
+                        setup_completed: true,
+                        setup_completed_at: new Date().toISOString()
+                    }
+                },
+                req.setupCode
+            );
+
+            if (!updatedOrg) {
+                res.status(500).json({
+                    success: false,
+                    message: 'Failed to update organization status'
+                });
+                return;
+            }
+
+            res.status(200).json({
+                success: true,
+                message: 'Organization setup completed successfully',
+                data: {
+                    id: updatedOrg.id,
+                    name: updatedOrg.name,
+                    status: updatedOrg.status
+                }
+            });
+        } catch (error) {
+            logger.error('Error completing organization setup', { error, id: req.params.id });
+            next(error);
+        }
+    }
+
+    /**
      * Delete organization profile
      */
     async deleteOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {

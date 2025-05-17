@@ -17,7 +17,7 @@ export async function createRefreshToken(data: CreateRefreshToken): Promise<Refr
     const result = await db.query(
         `INSERT INTO refresh_tokens (
             user_id, token, expires_at, device_info
-        ) VALUES ($1, $2, $3, $4) 
+        ) VALUES ($1, $2, $3, $4)
         RETURNING *`,
         [
             data.user_id,

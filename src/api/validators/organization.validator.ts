@@ -39,6 +39,26 @@ export const ListOrganizationProfilesValidator = z.object({
     })
 });
 
+// Branding update validator - only for branding-related fields
+export const UpdateOrganizationBrandingValidator = z.object({
+    params: z.object({
+        id: z.string().uuid('Invalid organization ID')
+    }),
+    body: z.object({
+        logo_url: z.string().url('Invalid logo URL').optional().or(z.literal('')),
+        primary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid primary color format').optional(),
+        secondary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid secondary color format').optional().or(z.literal(''))
+    })
+});
+
+// Complete organization setup validator
+export const CompleteOrganizationSetupValidator = z.object({
+    params: z.object({
+        id: z.string().uuid('Invalid organization ID')
+    }),
+    body: z.object({}).optional() // No body required
+});
+
 // Setup code request validators
 export const CreateSetupCodeValidator = z.object({
     body: CreateSetupCodeSchema

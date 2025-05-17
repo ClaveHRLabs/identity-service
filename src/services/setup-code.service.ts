@@ -1,10 +1,12 @@
 import { logger } from '../utils/logger';
 import * as setupCodeRepository from '../db/setup-code';
+import * as organizationRepository from '../db/organization';
 import { OrganizationService } from './organization.service';
 import {
     OrganizationSetupCode,
     CreateSetupCode,
-    OrganizationProfile
+    OrganizationProfile,
+    CreateOrganizationProfile
 } from '../models/schemas/organization';
 import { AppError } from '../api/middlewares/error-handler';
 
@@ -17,18 +19,64 @@ export class SetupCodeService {
 
     /**
      * Create a new setup code for an organization
+     * If organization_id is not provided but organization_name is, find or create the organization
      */
-    async createSetupCode(data: CreateSetupCode): Promise<OrganizationSetupCode> {
-        logger.info('Creating new setup code', { organizationId: data.organization_id });
-
-        // Verify organization exists
-        const organization = await this.organizationService.getOrganizationProfile(data.organization_id);
-        if (!organization) {
-            logger.error('Failed to create setup code - organization not found', { organizationId: data.organization_id });
-            throw new AppError('Organization not found', 404, 'NOT_FOUND');
-        }
+    async createSetupCode(data: CreateSetupCode & { organization_name?: string }): Promise<OrganizationSetupCode> {
+        let organizationId = data.organization_id;
+        const organizationName = data.organization_name;
 
         try {
+            // If organization ID is not provided but name is, look up the organization by name
+            if (!organizationId && organizationName) {
+                logger.info('Organization ID not provided, searching by name', { organizationName });
+
+                // Check if organization with this name already exists
+                const existingOrg = await organizationRepository.findOrganizationProfileByName(organizationName);
+
+                if (existingOrg) {
+                    // Organization exists, use its ID
+                    logger.info('Found existing organization by name', {
+                        organizationName,
+                        organizationId: existingOrg.id
+                    });
+                    organizationId = existingOrg.id;
+                } else {
+                    // Organization doesn't exist, create it
+                    logger.info('Organization not found, creating new one', { organizationName });
+
+                    const newOrgData: CreateOrganizationProfile = {
+                        name: organizationName,
+                        status: 'active',
+                        timezone: 'UTC',
+                        locale: 'en-US',
+                        subscription_tier: 'basic',
+                        subscription_status: 'trial'
+                    };
+
+                    const newOrg = await organizationRepository.createOrganizationProfile(newOrgData);
+                    logger.info('Created new organization', {
+                        organizationName: newOrg.name,
+                        organizationId: newOrg.id
+                    });
+
+                    organizationId = newOrg.id;
+                }
+
+                // Update the data object with the resolved organization ID
+                data.organization_id = organizationId;
+            } else if (!organizationId) {
+                logger.error('Failed to create setup code - no organization ID or name provided');
+                throw new AppError('Organization ID or name is required', 400, 'BAD_REQUEST');
+            }
+
+            // Verify organization exists
+            const organization = await this.organizationService.getOrganizationProfile(organizationId);
+            if (!organization) {
+                logger.error('Failed to create setup code - organization not found', { organizationId });
+                throw new AppError('Organization not found', 404, 'NOT_FOUND');
+            }
+
+            // Create the setup code
             const setupCode = await setupCodeRepository.createSetupCode(data);
             logger.info('Setup code created successfully', {
                 id: setupCode.id,
@@ -40,7 +88,8 @@ export class SetupCodeService {
         } catch (error) {
             logger.error('Failed to create setup code', {
                 error: error instanceof Error ? error.message : 'Unknown error',
-                organizationId: data.organization_id
+                organizationId,
+                organizationName
             });
             throw error;
         }

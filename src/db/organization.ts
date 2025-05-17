@@ -17,13 +17,28 @@ export async function getOrganizationProfileById(id: string): Promise<Organizati
 }
 
 /**
+ * Find organization profile by name (case-insensitive)
+ */
+export async function findOrganizationProfileByName(name: string): Promise<OrganizationProfile | null> {
+    const result = await db.query(
+        'SELECT * FROM organization_profiles WHERE LOWER(name) = LOWER($1)',
+        [name]
+    );
+    return result.rows[0] || null;
+}
+
+/**
  * Create a new organization profile
  */
-export async function createOrganizationProfile(profile: CreateOrganizationProfile): Promise<OrganizationProfile> {
-    const keys = Object.keys(profile);
-    const values = Object.values(profile);
+export async function createOrganizationProfile(
+    data: CreateOrganizationProfile
+): Promise<OrganizationProfile> {
+    // Create the SQL query dynamically based on provided fields
+    const keys = Object.keys(data);
     const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
     const columns = keys.join(', ');
+
+    const values = Object.values(data);
 
     const result = await db.query(
         `INSERT INTO organization_profiles (${columns}) 

@@ -9,7 +9,9 @@ import {
     UpdateOrganizationProfileValidator,
     GetOrganizationProfileValidator,
     DeleteOrganizationProfileValidator,
-    ListOrganizationProfilesValidator
+    ListOrganizationProfilesValidator,
+    UpdateOrganizationBrandingValidator,
+    CompleteOrganizationSetupValidator
 } from '../validators/organization.validator';
 
 export const createOrganizationRoutes = (organizationController: OrganizationController) => {
@@ -61,6 +63,20 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
         authorize('view_all_users'),
         validateRequest(ListOrganizationProfilesValidator),
         organizationController.listOrganizations.bind(organizationController)
+    );
+
+    // Update organization branding - requires setup code or manage_organizations permission
+    router.patch(
+        '/:id/branding',
+        validateRequest(UpdateOrganizationBrandingValidator),
+        organizationController.updateOrganizationBranding.bind(organizationController)
+    );
+
+    // Complete organization setup - requires setup code
+    router.post(
+        '/:id/complete-setup',
+        validateRequest(CompleteOrganizationSetupValidator),
+        organizationController.completeOrganizationSetup.bind(organizationController)
     );
 
     return router;

@@ -319,7 +319,7 @@ export class RoleService {
 
     // Check if user has specific role
     async userHasRole(userId: string, roleName: string, organizationId?: string): Promise<boolean> {
-        logger.debug('Checking if user has role', { userId, roleName, organizationId });
+        logger.info('Checking if user has role', { userId, roleName, organizationId });
         return roleRepository.userHasRole(userId, roleName, organizationId);
     }
 
