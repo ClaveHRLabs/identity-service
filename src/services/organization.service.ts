@@ -10,17 +10,28 @@ export class OrganizationService {
     /**
      * Create a new organization profile
      */
-    async createOrganizationProfile(profileData: CreateOrganizationProfile): Promise<OrganizationProfile> {
-        logger.info('Creating new organization profile', { name: profileData.name });
+    async createOrganizationProfile(
+        profileData: CreateOrganizationProfile,
+        setupCode?: string
+    ): Promise<OrganizationProfile> {
+        logger.info('Creating new organization profile', {
+            name: profileData.name,
+            hasSetupCode: !!setupCode
+        });
 
         try {
             const newProfile = await organizationRepository.createOrganizationProfile(profileData);
-            logger.info('Organization profile created successfully', { id: newProfile.id, name: newProfile.name });
+            logger.info('Organization profile created successfully', {
+                id: newProfile.id,
+                name: newProfile.name,
+                hasSetupCode: !!setupCode
+            });
             return newProfile;
         } catch (error) {
             logger.error('Failed to create organization profile', {
                 error: error instanceof Error ? error.message : 'Unknown error',
-                name: profileData.name
+                name: profileData.name,
+                hasSetupCode: !!setupCode
             });
             throw error;
         }
@@ -29,8 +40,14 @@ export class OrganizationService {
     /**
      * Get an organization profile by ID
      */
-    async getOrganizationProfile(id: string): Promise<OrganizationProfile | null> {
-        logger.debug('Fetching organization profile', { id });
+    async getOrganizationProfile(
+        id: string,
+        setupCode?: string
+    ): Promise<OrganizationProfile | null> {
+        logger.debug('Fetching organization profile', {
+            id,
+            hasSetupCode: !!setupCode
+        });
         return organizationRepository.getOrganizationProfileById(id);
     }
 
@@ -39,24 +56,35 @@ export class OrganizationService {
      */
     async updateOrganizationProfile(
         id: string,
-        updateData: UpdateOrganizationProfile
+        updateData: UpdateOrganizationProfile,
+        setupCode?: string
     ): Promise<OrganizationProfile | null> {
-        logger.info('Updating organization profile', { id });
+        logger.info('Updating organization profile', {
+            id,
+            hasSetupCode: !!setupCode
+        });
 
         try {
             const updatedProfile = await organizationRepository.updateOrganizationProfile(id, updateData);
 
             if (updatedProfile) {
-                logger.info('Organization profile updated successfully', { id });
+                logger.info('Organization profile updated successfully', {
+                    id,
+                    hasSetupCode: !!setupCode
+                });
             } else {
-                logger.warn('Organization profile not found for update', { id });
+                logger.warn('Organization profile not found for update', {
+                    id,
+                    hasSetupCode: !!setupCode
+                });
             }
 
             return updatedProfile;
         } catch (error) {
             logger.error('Failed to update organization profile', {
                 id,
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: error instanceof Error ? error.message : 'Unknown error',
+                hasSetupCode: !!setupCode
             });
             throw error;
         }
@@ -65,23 +93,36 @@ export class OrganizationService {
     /**
      * Delete an organization profile
      */
-    async deleteOrganizationProfile(id: string): Promise<boolean> {
-        logger.info('Deleting organization profile', { id });
+    async deleteOrganizationProfile(
+        id: string,
+        setupCode?: string
+    ): Promise<boolean> {
+        logger.info('Deleting organization profile', {
+            id,
+            hasSetupCode: !!setupCode
+        });
 
         try {
             const deleted = await organizationRepository.deleteOrganizationProfile(id);
 
             if (deleted) {
-                logger.info('Organization profile deleted successfully', { id });
+                logger.info('Organization profile deleted successfully', {
+                    id,
+                    hasSetupCode: !!setupCode
+                });
             } else {
-                logger.warn('Organization profile not found for deletion', { id });
+                logger.warn('Organization profile not found for deletion', {
+                    id,
+                    hasSetupCode: !!setupCode
+                });
             }
 
             return deleted;
         } catch (error) {
             logger.error('Failed to delete organization profile', {
                 id,
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: error instanceof Error ? error.message : 'Unknown error',
+                hasSetupCode: !!setupCode
             });
             throw error;
         }
@@ -93,9 +134,15 @@ export class OrganizationService {
     async getOrganizationProfiles(
         filters: { status?: string; subscription_tier?: string } = {},
         limit = 100,
-        offset = 0
+        offset = 0,
+        setupCode?: string
     ): Promise<{ profiles: OrganizationProfile[]; total: number }> {
-        logger.debug('Fetching organization profiles', { filters, limit, offset });
+        logger.debug('Fetching organization profiles', {
+            filters,
+            limit,
+            offset,
+            hasSetupCode: !!setupCode
+        });
 
         try {
             const [profiles, total] = await Promise.all([
@@ -106,7 +153,8 @@ export class OrganizationService {
             return { profiles, total };
         } catch (error) {
             logger.error('Failed to fetch organization profiles', {
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: error instanceof Error ? error.message : 'Unknown error',
+                hasSetupCode: !!setupCode
             });
             throw error;
         }

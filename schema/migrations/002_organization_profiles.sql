@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS organization_setup_codes (
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     used BOOLEAN NOT NULL DEFAULT false,
     used_at TIMESTAMP WITH TIME ZONE,
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_by_admin VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
@@ -54,4 +54,4 @@ EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trigger_setup_codes_updated_at
 BEFORE UPDATE ON organization_setup_codes
 FOR EACH ROW
-EXECUTE FUNCTION update_updated_at(); 
+EXECUTE FUNCTION update_updated_at();

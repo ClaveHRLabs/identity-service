@@ -9,7 +9,7 @@ import { generateRandomCode } from '../utils/code-generator';
  * Create a new setup code for an organization
  */
 export async function createSetupCode(data: CreateSetupCode): Promise<OrganizationSetupCode> {
-    const { organization_id, expiration_hours = 24, created_by } = data;
+    const { organization_id, expiration_hours = 24, created_by_admin } = data;
 
     // Generate a random alphanumeric code
     const code = generateRandomCode(10);
@@ -20,10 +20,10 @@ export async function createSetupCode(data: CreateSetupCode): Promise<Organizati
 
     const result = await db.query(
         `INSERT INTO organization_setup_codes (
-      organization_id, code, data, expires_at, created_by
+      organization_id, code, data, expires_at, created_by_admin
     ) VALUES ($1, $2, $3, $4, $5) 
     RETURNING *`,
-        [organization_id, code, data.data || {}, expires_at, created_by]
+        [organization_id, code, data.data || {}, expires_at, created_by_admin]
     );
 
     return result.rows[0];

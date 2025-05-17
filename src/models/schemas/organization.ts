@@ -53,7 +53,7 @@ export const OrganizationSetupCodeSchema = z.object({
     expires_at: z.date(),
     used: z.boolean().default(false),
     used_at: z.date().optional(),
-    created_by: z.string().uuid().optional(),
+    created_by_admin: z.string().optional(),
     created_at: z.date(),
     updated_at: z.date(),
 });
@@ -63,7 +63,7 @@ export const CreateSetupCodeSchema = z.object({
     organization_id: z.string().uuid(),
     expiration_hours: z.number().positive().default(24),
     data: z.record(z.any()).optional(),
-    created_by: z.string().uuid().optional(),
+    created_by_admin: z.string().optional(),
 });
 
 // Schema for validating a setup code

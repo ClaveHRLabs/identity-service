@@ -15,7 +15,12 @@ export class OrganizationController {
     async createOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const organizationData = req.body;
-            const organization = await this.organizationService.createOrganizationProfile(organizationData);
+
+            // Pass setup code to service if available
+            const organization = await this.organizationService.createOrganizationProfile(
+                organizationData,
+                req.setupCode
+            );
 
             res.status(201).json({
                 success: true,
@@ -33,7 +38,7 @@ export class OrganizationController {
     async getOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;
-            const organization = await this.organizationService.getOrganizationProfile(id);
+            const organization = await this.organizationService.getOrganizationProfile(id, req.setupCode);
 
             if (!organization) {
                 res.status(404).json({
@@ -61,7 +66,11 @@ export class OrganizationController {
             const { id } = req.params;
             const updateData = req.body;
 
-            const organization = await this.organizationService.updateOrganizationProfile(id, updateData);
+            const organization = await this.organizationService.updateOrganizationProfile(
+                id,
+                updateData,
+                req.setupCode
+            );
 
             if (!organization) {
                 res.status(404).json({
@@ -87,7 +96,7 @@ export class OrganizationController {
     async deleteOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;
-            const deleted = await this.organizationService.deleteOrganizationProfile(id);
+            const deleted = await this.organizationService.deleteOrganizationProfile(id, req.setupCode);
 
             if (!deleted) {
                 res.status(404).json({
@@ -121,7 +130,8 @@ export class OrganizationController {
             const result = await this.organizationService.getOrganizationProfiles(
                 filters,
                 Number(limit),
-                Number(offset)
+                Number(offset),
+                req.setupCode
             );
 
             res.status(200).json({

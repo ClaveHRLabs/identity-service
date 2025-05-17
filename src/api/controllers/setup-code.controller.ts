@@ -15,6 +15,13 @@ export class SetupCodeController {
     async createSetupCode(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const setupCodeData = req.body;
+
+            // Add admin information from the header if available
+            const adminKey = req.header('x-clavehr-admin-key');
+            if (adminKey) {
+                setupCodeData.created_by_admin = 'ClaveHR Admin';
+            }
+
             const setupCode = await this.setupCodeService.createSetupCode(setupCodeData);
 
             res.status(201).json({

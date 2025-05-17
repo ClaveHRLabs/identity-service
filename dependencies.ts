@@ -9,20 +9,36 @@ import { errorHandler } from './src/api/middlewares/error-handler';
 import { requestIdMiddleware } from './src/api/middlewares/request-id';
 import { OrganizationService } from './src/services/organization.service';
 import { SetupCodeService } from './src/services/setup-code.service';
+import { UserService } from './src/services/user.service';
+import { AuthService } from './src/services/auth.service';
+import { RoleService } from './src/services/role.service';
+import { RoleAssignmentService } from './src/services/role-assignment.service';
 import { OrganizationController } from './src/api/controllers/organization.controller';
 import { SetupCodeController } from './src/api/controllers/setup-code.controller';
+import { UserController } from './src/api/controllers/user.controller';
+import { AuthController } from './src/api/controllers/auth.controller';
 import { registerRoutes } from './src/api/routes';
+import { EmailService } from './src/services/email.service';
 
 // Singleton: Database Pool
 export const dbPool = db;
 
+// Singleton: Email Service for sending magic links and notifications
+export const emailService = new EmailService();
+
 // Factory: Services
 export const organizationService = new OrganizationService();
 export const setupCodeService = new SetupCodeService(organizationService);
+export const userService = new UserService();
+export const authService = new AuthService(userService, emailService);
+export const roleService = new RoleService();
+export const roleAssignmentService = new RoleAssignmentService();
 
 // Factory: Controllers
 export const organizationController = new OrganizationController(organizationService);
 export const setupCodeController = new SetupCodeController(setupCodeService);
+export const userController = new UserController(userService);
+export const authController = new AuthController(authService);
 
 /**
  * Create Express App with all middleware
@@ -81,7 +97,7 @@ export const createExpressApp = () => {
     });
 
     // Register API routes
-    registerRoutes(app, organizationController, setupCodeController);
+    registerRoutes(app, organizationController, setupCodeController, userController, authController);
 
     // Error handling middleware (must be last)
     app.use(errorHandler);

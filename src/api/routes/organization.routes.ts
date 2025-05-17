@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { OrganizationController } from '../controllers/organization.controller';
 import { validateRequest } from '../middlewares/validate-request';
+import { extractSetupCode } from '../middlewares/setup-code';
 import {
     CreateOrganizationProfileValidator,
     UpdateOrganizationProfileValidator,
@@ -11,6 +12,9 @@ import {
 
 export const createOrganizationRoutes = (organizationController: OrganizationController) => {
     const router = Router();
+
+    // Apply the extract setup code middleware to all organization routes
+    router.use(extractSetupCode);
 
     // Create an organization profile
     router.post(

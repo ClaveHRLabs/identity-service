@@ -31,6 +31,16 @@ const envSchema = z.object({
     // App Configuration
     SERVICE_NAME: z.string().default('identity-service'),
     API_PREFIX: z.string().default('/api'),
+    FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+
+    // Admin Configuration
+    ADMIN_KEY: z.string().min(1, 'ADMIN_KEY is required'),
+
+    // OAuth Configuration
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+    MICROSOFT_CLIENT_ID: z.string().optional(),
+    MICROSOFT_CLIENT_SECRET: z.string().optional(),
 
     // Error Handling
     SHOW_ERROR_STACK: z.string().transform(val => val === 'true').default('false'),
@@ -74,6 +84,16 @@ export class Config {
     // App Configuration
     public static readonly SERVICE_NAME: string = process.env.SERVICE_NAME || 'identity-service';
     public static readonly API_PREFIX: string = process.env.API_PREFIX || '/api';
+    public static readonly FRONTEND_URL: string = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+    // Admin Configuration
+    public static readonly ADMIN_KEY: string = process.env.ADMIN_KEY || '';
+
+    // OAuth Configuration
+    public static readonly GOOGLE_CLIENT_ID: string = process.env.GOOGLE_CLIENT_ID || '';
+    public static readonly GOOGLE_CLIENT_SECRET: string = process.env.GOOGLE_CLIENT_SECRET || '';
+    public static readonly MICROSOFT_CLIENT_ID: string = process.env.MICROSOFT_CLIENT_ID || '';
+    public static readonly MICROSOFT_CLIENT_SECRET: string = process.env.MICROSOFT_CLIENT_SECRET || '';
 
     // Error Handling
     public static readonly SHOW_ERROR_STACK: boolean = process.env.SHOW_ERROR_STACK === 'true';

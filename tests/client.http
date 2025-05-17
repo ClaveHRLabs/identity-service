@@ -1,5 +1,9 @@
 ### Variables
 @baseUrl = http://localhost:3001
+@adminKey = your-admin-key-here
+@setupCode = ABCD123456
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTUxNjIzOTAyMn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+@refreshToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIiwidHlwZSI6InJlZnJlc2giLCJpYXQiOjE1MTYyMzkwMjJ9.JL5WQAl0_KF_Qcvy1Zg2Ayww-Laa9JdcwNtZLMn9OjQ
 
 ### Health Check
 GET {{baseUrl}}/health
@@ -9,11 +13,106 @@ Accept: application/json
 GET {{baseUrl}}/ping
 Accept: application/json
 
+### ===== USER MANAGEMENT =====
+
+### Create User
+POST {{baseUrl}}/api/users
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "first_name": "John",
+  "last_name": "Doe",
+  "display_name": "John Doe",
+  "organization_id": "d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e"
+}
+
+### Get Current User
+GET {{baseUrl}}/api/users/me
+Authorization: Bearer {{accessToken}}
+
+### Get User by ID
+GET {{baseUrl}}/api/users/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+Accept: application/json
+
+### Update User
+PUT {{baseUrl}}/api/users/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+Content-Type: application/json
+
+{
+  "first_name": "Johnny",
+  "last_name": "Doe",
+  "display_name": "Johnny Doe"
+}
+
+### Delete User
+DELETE {{baseUrl}}/api/users/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+
+### List Users
+GET {{baseUrl}}/api/users?organization_id=d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e&status=active&limit=10&offset=0
+Accept: application/json
+
+### ===== AUTHENTICATION =====
+
+### Google Authentication
+POST {{baseUrl}}/api/auth/google
+Content-Type: application/json
+
+{
+  "code": "4/P7q7W91a-oMsCeLvIaQm6bTrgtp7",
+  "redirect_uri": "http://localhost:3000/auth/callback"
+}
+
+### Microsoft Authentication
+POST {{baseUrl}}/api/auth/microsoft
+Content-Type: application/json
+
+{
+  "code": "M.R3_BAY.c1f4c670-0520-c35c-e217-606a84ea3e0c",
+  "redirect_uri": "http://localhost:3000/auth/callback"
+}
+
+### Send Magic Link
+POST {{baseUrl}}/api/auth/magic-link
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "redirect_uri": "http://localhost:3000/auth/callback"
+}
+
+### Verify Magic Link
+POST {{baseUrl}}/api/auth/verify-magic-link
+Content-Type: application/json
+
+{
+  "token": "a1b2c3d4e5f6g7h8i9j0"
+}
+
+### Refresh Token
+POST {{baseUrl}}/api/auth/refresh-token
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refreshToken}}"
+}
+
+### Logout
+POST {{baseUrl}}/api/auth/logout
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refreshToken}}"
+}
+
 ### ===== ORGANIZATION PROFILES =====
 
 ### Create Organization Profile
 POST {{baseUrl}}/api/organizations
 Content-Type: application/json
+# Optional: Include setup code if you have one
+# x-setup-code: {{setupCode}}
 
 {
   "name": "Sample Company",
@@ -30,10 +129,14 @@ Content-Type: application/json
 ### Get Organization Profile
 GET {{baseUrl}}/api/organizations/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
 Accept: application/json
+# Optional: Include setup code if you have one
+# x-setup-code: {{setupCode}}
 
 ### Update Organization Profile
 PUT {{baseUrl}}/api/organizations/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
 Content-Type: application/json
+# Optional: Include setup code if you have one
+# x-setup-code: {{setupCode}}
 
 {
   "name": "Updated Company Name",
@@ -43,16 +146,22 @@ Content-Type: application/json
 
 ### Delete Organization Profile
 DELETE {{baseUrl}}/api/organizations/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+# Optional: Include setup code if you have one
+# x-setup-code: {{setupCode}}
 
 ### List Organization Profiles
 GET {{baseUrl}}/api/organizations?status=active&subscription_tier=basic&limit=10&offset=0
 Accept: application/json
+# Optional: Include setup code if you have one
+# x-setup-code: {{setupCode}}
 
 ### ===== ORGANIZATION SETUP CODES =====
 
-### Create Setup Code
+### Create Setup Code (Requires Admin Authentication)
+# The admin key is required, and admin name will be automatically captured
 POST {{baseUrl}}/api/setup-codes
 Content-Type: application/json
+x-clavehr-admin-key: {{adminKey}}
 
 {
   "organization_id": "d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e",
@@ -66,8 +175,11 @@ Content-Type: application/json
 ### Get Organization Setup Codes
 GET {{baseUrl}}/api/organizations/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e/setup-codes?includeUsed=false
 Accept: application/json
+# Optional: Include setup code if you have one
+# x-setup-code: {{setupCode}}
 
 ### Validate Setup Code
+# This endpoint will return the x-setup-code header in the response if valid
 POST {{baseUrl}}/api/setup-codes/validate
 Content-Type: application/json
 
@@ -75,5 +187,20 @@ Content-Type: application/json
   "code": "ABCD123456"
 }
 
-### Delete Setup Code
+### Delete Setup Code (Requires Admin Authentication)
 DELETE {{baseUrl}}/api/setup-codes/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+x-clavehr-admin-key: {{adminKey}}
+
+### ===== EXAMPLE: Using organization APIs with setup code =====
+
+### Example: Create Organization with Setup Code
+POST {{baseUrl}}/api/organizations
+Content-Type: application/json
+x-setup-code: {{setupCode}}
+
+{
+  "name": "New Organization With Setup Code",
+  "industry": "Healthcare",
+  "size": "10-50",
+  "country": "Canada"
+}

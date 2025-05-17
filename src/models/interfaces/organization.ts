@@ -29,7 +29,7 @@ export interface OrganizationSetupCode {
     expires_at: Date;
     used: boolean;
     used_at?: Date;
-    created_by?: string;
+    created_by_admin?: string;
     created_at: Date;
     updated_at: Date;
 }
@@ -47,7 +47,7 @@ export type CreateSetupCodeDto = {
     organization_id: string;
     expiration_hours?: number;
     data?: Record<string, any>;
-    created_by?: string;
+    created_by_admin?: string;
 };
 
 export type ValidateSetupCodeDto = {

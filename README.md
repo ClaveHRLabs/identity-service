@@ -153,6 +153,59 @@ yarn test
 - `GET /health` - Check service health
 - `GET /ping` - Simple ping endpoint
 
+## Role-Based Access Control (RBAC)
+
+The identity service implements a comprehensive role-based access control system that ensures users can only perform actions they have permissions for. This system consists of:
+
+### Roles
+
+The system defines the following roles with different permission levels:
+
+1. **Super Admin** - System-wide access and configuration
+2. **Organization Admin** - Full control over a specific organization
+3. **Organization Manager** - User management and limited admin access
+4. **HR Manager** - Access to HR-related features
+5. **Hiring Manager** - Recruitment and applicant tracking
+6. **Team Manager** - Manages direct reports and team operations
+7. **Employee** - Basic access to personal information
+8. **Recruiter** - Manages recruitment processes
+9. **Learning Specialist** - Manages learning and development
+10. **Succession Planner** - Manages succession planning
+11. **ClaveHR Operator** - Special role for onboarding/deboarding organizations
+
+### Permissions
+
+Each role is assigned a set of permissions that define what actions they can perform:
+
+- **manage_system** - Manage system-wide settings
+- **manage_organizations** - Create, update, delete organizations
+- **manage_users** - Create, update, delete users
+- **view_all_users** - View all users in the organization
+- **manage_roles** - Assign and remove user roles
+- And more specific permissions...
+
+### Role Assignment Restrictions
+
+The system enforces rules around which roles can assign other roles:
+
+1. **Super Admin** can assign any role
+2. **ClaveHR Operator** can assign any role except Super Admin
+3. **Organization Admin** can assign organization-level roles
+4. **Organization Manager** can only assign Employee and Team Manager roles
+5. **HR Manager** can only assign the Employee role
+
+### API Endpoints
+
+The RBAC system is exposed through the following API endpoints:
+
+- **GET /api/roles** - Get all roles (requires 'view_all_users' permission)
+- **GET /api/roles/assignable** - Get roles that the current user can assign
+- **POST /api/roles/assign** - Assign role to user (requires 'manage_roles' permission)
+- **DELETE /api/roles/user/:userId/role/:roleId** - Remove role from user
+- **GET /api/roles/check-permission/:userId/:permissionName** - Check if user has permission
+
+All API endpoints are protected by authorization middleware that validates the user has the required permissions before allowing access.
+
 ## License
 
 MIT
