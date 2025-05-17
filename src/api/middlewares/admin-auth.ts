@@ -1,23 +1,37 @@
 import { Request, Response, NextFunction } from 'express';
-import { Config } from '../../config/config';
 import { logger } from '../../utils/logger';
 import { AppError } from './error-handler';
+import { RoleService } from '../../services/role.service';
+import { UserRole } from '../../models/enums/roles.enum';
+
+const roleService = new RoleService();
 
 /**
- * Middleware to verify admin key in the request header
+ * Middleware to verify that the user has the ClaveHR Operator role
+ * This replaces the previous admin key authentication
  */
-export const verifyAdminKey = (req: Request, res: Response, next: NextFunction): void => {
-    const adminKey = req.header('x-clavehr-admin-key');
+export const verifyClaveHROperator = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        // Get user ID from request (set by authentication middleware)
+        const userId = req.user?.id;
+        if (!userId) {
+            logger.warn('Unauthorized access attempt - no user ID');
+            return next(new AppError('Unauthorized', 401, 'UNAUTHORIZED'));
+        }
 
-    if (!adminKey) {
-        logger.warn('Admin key missing in request');
-        throw new AppError('Admin authentication required', 401, 'UNAUTHORIZED');
+        // Check if user has the clavehr_operator role
+        const isOperator = await roleService.userHasRole(userId, UserRole.CLAVEHR_OPERATOR);
+
+        if (!isOperator) {
+            logger.warn('Access denied - user is not a ClaveHR Operator', { userId });
+            return next(new AppError('Only ClaveHR Operators can perform this action', 403, 'FORBIDDEN'));
+        }
+
+        next();
+    } catch (error) {
+        logger.error('Error verifying ClaveHR Operator role', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        next(error);
     }
-
-    if (adminKey !== Config.ADMIN_KEY) {
-        logger.warn('Invalid admin key provided');
-        throw new AppError('Invalid admin credentials', 403, 'FORBIDDEN');
-    }
-
-    next();
 }; 

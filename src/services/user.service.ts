@@ -1,5 +1,6 @@
 import { logger } from '../utils/logger';
 import * as userRepository from '../db/user';
+import * as roleRepository from '../db/role';
 import { CreateUser, UpdateUser, User } from '../models/schemas/user';
 import { AppError } from '../api/middlewares/error-handler';
 
@@ -20,6 +21,33 @@ export class UserService {
 
             const newUser = await userRepository.createUser(userData);
             logger.info('User created successfully', { id: newUser.id, email: newUser.email });
+
+            // Assign default employee role to the new user
+            try {
+                // Get the employee role
+                const employeeRole = await roleRepository.getRoleByName('employee');
+                if (employeeRole) {
+                    // Assign the role
+                    await roleRepository.assignRoleToUser({
+                        user_id: newUser.id,
+                        role_id: employeeRole.id,
+                        organization_id: userData.organization_id
+                    });
+                    logger.info('Default employee role assigned to user', {
+                        userId: newUser.id,
+                        roleId: employeeRole.id
+                    });
+                } else {
+                    logger.warn('Could not find employee role to assign to new user', { userId: newUser.id });
+                }
+            } catch (roleError) {
+                // Don't fail user creation if role assignment fails
+                logger.error('Failed to assign default employee role', {
+                    userId: newUser.id,
+                    error: roleError instanceof Error ? roleError.message : 'Unknown error'
+                });
+            }
+
             return newUser;
         } catch (error) {
             if (error instanceof AppError) {

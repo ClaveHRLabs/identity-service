@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { SetupCodeController } from '../controllers/setup-code.controller';
 import { validateRequest } from '../middlewares/validate-request';
-import { verifyAdminKey } from '../middlewares/admin-auth';
+import { verifyClaveHROperator } from '../middlewares/admin-auth';
+import { authenticate } from '../middlewares/authenticate';
 import { addSetupCodeHeader } from '../middlewares/setup-code';
 import {
     CreateSetupCodeValidator,
@@ -13,10 +14,11 @@ import {
 export const createSetupCodeRoutes = (setupCodeController: SetupCodeController) => {
     const router = Router();
 
-    // Create a new setup code - requires admin key
+    // Create a new setup code - requires ClaveHR Operator role
     router.post(
         '/',
-        verifyAdminKey,
+        authenticate,
+        verifyClaveHROperator,
         validateRequest(CreateSetupCodeValidator),
         setupCodeController.createSetupCode.bind(setupCodeController)
     );
@@ -29,10 +31,11 @@ export const createSetupCodeRoutes = (setupCodeController: SetupCodeController) 
         setupCodeController.validateSetupCode.bind(setupCodeController)
     );
 
-    // Delete a setup code - requires admin key
+    // Delete a setup code - requires ClaveHR Operator role
     router.delete(
         '/:id',
-        verifyAdminKey,
+        authenticate,
+        verifyClaveHROperator,
         validateRequest(DeleteSetupCodeValidator),
         setupCodeController.deleteSetupCode.bind(setupCodeController)
     );

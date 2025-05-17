@@ -1,12 +1,13 @@
 import { logger } from '../utils/logger';
 import { RoleService } from './role.service';
+import { UserRole } from '../models/enums/roles.enum';
 
 /**
  * Service to handle role assignment validation and business rules
  */
 export class RoleAssignmentService {
     private roleService: RoleService;
-    
+
     constructor() {
         this.roleService = new RoleService();
     }
@@ -30,14 +31,14 @@ export class RoleAssignmentService {
 
         try {
             // Check if assigner is a super_admin (can assign any role)
-            const isSuperAdmin = await this.roleService.userHasRole(assignerId, 'super_admin');
+            const isSuperAdmin = await this.roleService.userHasRole(assignerId, UserRole.SUPER_ADMIN);
             if (isSuperAdmin) return true;
 
             // Check if assigner is a clavehr_operator (can assign most roles)
-            const isClaveHrOperator = await this.roleService.userHasRole(assignerId, 'clavehr_operator');
+            const isClaveHrOperator = await this.roleService.userHasRole(assignerId, UserRole.CLAVEHR_OPERATOR);
             if (isClaveHrOperator) {
                 // ClaveHR Operators cannot assign super_admin
-                if (roleToAssign === 'super_admin') {
+                if (roleToAssign === UserRole.SUPER_ADMIN) {
                     logger.warn('ClaveHR Operator attempted to assign super_admin role', { assignerId });
                     return false;
                 }
@@ -47,21 +48,21 @@ export class RoleAssignmentService {
             // Check if assigner is an organization_admin (can assign org-level roles)
             const isOrgAdmin = await this.roleService.userHasRole(
                 assignerId,
-                'organization_admin',
+                UserRole.ORGANIZATION_ADMIN,
                 organizationId
             );
 
             if (isOrgAdmin) {
                 // Organization admins can assign these roles
                 const assignableRoles = [
-                    'organization_manager',
-                    'hr_manager',
-                    'hiring_manager',
-                    'team_manager',
-                    'employee',
-                    'recruiter',
-                    'learning_specialist',
-                    'succession_planner'
+                    UserRole.ORGANIZATION_MANAGER,
+                    UserRole.HR_MANAGER,
+                    UserRole.HIRING_MANAGER,
+                    UserRole.TEAM_MANAGER,
+                    UserRole.EMPLOYEE,
+                    UserRole.RECRUITER,
+                    UserRole.LEARNING_SPECIALIST,
+                    UserRole.SUCCESSION_PLANNER
                 ];
 
                 if (assignableRoles.includes(roleToAssign)) {
@@ -72,15 +73,15 @@ export class RoleAssignmentService {
             // Check if assigner is an organization_manager (limited assignment rights)
             const isOrgManager = await this.roleService.userHasRole(
                 assignerId,
-                'organization_manager',
+                UserRole.ORGANIZATION_MANAGER,
                 organizationId
             );
 
             if (isOrgManager) {
                 // Organization managers can only assign these roles
                 const assignableRoles = [
-                    'employee',
-                    'team_manager'
+                    UserRole.EMPLOYEE,
+                    UserRole.TEAM_MANAGER
                 ];
 
                 if (assignableRoles.includes(roleToAssign)) {
@@ -91,13 +92,13 @@ export class RoleAssignmentService {
             // HR managers can assign basic roles
             const isHrManager = await this.roleService.userHasRole(
                 assignerId,
-                'hr_manager',
+                UserRole.HR_MANAGER,
                 organizationId
             );
 
             if (isHrManager) {
                 // HR managers can only assign employee role
-                if (roleToAssign === 'employee') {
+                if (roleToAssign === UserRole.EMPLOYEE) {
                     return true;
                 }
             }
@@ -126,79 +127,79 @@ export class RoleAssignmentService {
      */
     async getAssignableRoles(userId: string, organizationId?: string): Promise<string[]> {
         // Check user roles to determine which roles they can assign
-        const isSuperAdmin = await this.roleService.userHasRole(userId, 'super_admin');
+        const isSuperAdmin = await this.roleService.userHasRole(userId, UserRole.SUPER_ADMIN);
         if (isSuperAdmin) {
             return [
-                'super_admin',
-                'organization_admin',
-                'organization_manager',
-                'hr_manager',
-                'hiring_manager',
-                'team_manager',
-                'employee',
-                'recruiter',
-                'learning_specialist',
-                'succession_planner',
-                'clavehr_operator'
+                UserRole.SUPER_ADMIN,
+                UserRole.ORGANIZATION_ADMIN,
+                UserRole.ORGANIZATION_MANAGER,
+                UserRole.HR_MANAGER,
+                UserRole.HIRING_MANAGER,
+                UserRole.TEAM_MANAGER,
+                UserRole.EMPLOYEE,
+                UserRole.RECRUITER,
+                UserRole.LEARNING_SPECIALIST,
+                UserRole.SUCCESSION_PLANNER,
+                UserRole.CLAVEHR_OPERATOR
             ];
         }
 
-        const isClaveHrOperator = await this.roleService.userHasRole(userId, 'clavehr_operator');
+        const isClaveHrOperator = await this.roleService.userHasRole(userId, UserRole.CLAVEHR_OPERATOR);
         if (isClaveHrOperator) {
             return [
-                'organization_admin',
-                'organization_manager',
-                'hr_manager',
-                'hiring_manager',
-                'team_manager',
-                'employee',
-                'recruiter',
-                'learning_specialist',
-                'succession_planner',
-                'clavehr_operator'
+                UserRole.ORGANIZATION_ADMIN,
+                UserRole.ORGANIZATION_MANAGER,
+                UserRole.HR_MANAGER,
+                UserRole.HIRING_MANAGER,
+                UserRole.TEAM_MANAGER,
+                UserRole.EMPLOYEE,
+                UserRole.RECRUITER,
+                UserRole.LEARNING_SPECIALIST,
+                UserRole.SUCCESSION_PLANNER,
+                UserRole.CLAVEHR_OPERATOR
             ];
         }
 
         const isOrgAdmin = await this.roleService.userHasRole(
             userId,
-            'organization_admin',
+            UserRole.ORGANIZATION_ADMIN,
             organizationId
         );
 
         if (isOrgAdmin) {
             return [
-                'organization_manager',
-                'hr_manager',
-                'hiring_manager',
-                'team_manager',
-                'employee',
-                'recruiter',
-                'learning_specialist',
-                'succession_planner'
+                UserRole.ORGANIZATION_MANAGER,
+                UserRole.HR_MANAGER,
+                UserRole.HIRING_MANAGER,
+                UserRole.TEAM_MANAGER,
+                UserRole.EMPLOYEE,
+                UserRole.RECRUITER,
+                UserRole.LEARNING_SPECIALIST,
+                UserRole.SUCCESSION_PLANNER
             ];
         }
 
         const isOrgManager = await this.roleService.userHasRole(
             userId,
-            'organization_manager',
+            UserRole.ORGANIZATION_MANAGER,
             organizationId
         );
 
         if (isOrgManager) {
             return [
-                'employee',
-                'team_manager'
+                UserRole.EMPLOYEE,
+                UserRole.TEAM_MANAGER
             ];
         }
 
         const isHrManager = await this.roleService.userHasRole(
             userId,
-            'hr_manager',
+            UserRole.HR_MANAGER,
             organizationId
         );
 
         if (isHrManager) {
-            return ['employee'];
+            return [UserRole.EMPLOYEE];
         }
 
         // Default: no assignable roles
