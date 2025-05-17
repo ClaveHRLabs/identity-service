@@ -1,0 +1,10 @@
+### Variables
+@baseUrl = http://localhost:3000
+
+### Health Check
+GET {{baseUrl}}/health
+Accept: application/json
+
+### Ping Service
+GET {{baseUrl}}/ping
+Accept: application/json
