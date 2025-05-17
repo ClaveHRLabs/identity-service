@@ -13,6 +13,7 @@ import {
     UpdateOrganizationBrandingValidator,
     CompleteOrganizationSetupValidator
 } from '../validators/organization.validator';
+import { logger } from '../../utils/logger';
 
 /**
  * Custom middleware to check for either a valid auth token or a setup code
@@ -21,10 +22,19 @@ import {
 const authOrSetupCode = (req: any, res: any, next: any) => {
     // If setup code is present, skip normal auth checks
     if (req.setupCode) {
+        logger.debug('Using setup code authentication for route', {
+            path: req.path,
+            method: req.method,
+            organizationId: req.params.id
+        });
         return next();
     }
 
     // Otherwise apply normal authentication
+    logger.debug('Using JWT authentication for route', {
+        path: req.path,
+        method: req.method
+    });
     authenticate(req, res, next);
 };
 

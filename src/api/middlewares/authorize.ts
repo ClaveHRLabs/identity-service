@@ -14,6 +14,15 @@ const roleService = new RoleService();
 export const authorize = (requiredPermission: string) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
+            // Skip permission check if request is authenticated via setup code
+            if (req.setupCode) {
+                logger.debug('Bypassing permission check due to valid setup code', {
+                    requiredPermission,
+                    path: req.path
+                });
+                return next();
+            }
+
             // Get user ID from request (set by authentication middleware)
             const userId = req.user?.id;
             if (!userId) {
