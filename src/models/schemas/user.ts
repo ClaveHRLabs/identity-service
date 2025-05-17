@@ -33,7 +33,7 @@ export const UserSchema = z.object({
 export const AuthProviderSchema = z.object({
     id: z.string().uuid(),
     user_id: z.string().uuid(),
-    provider_type: z.enum(['google', 'microsoft', 'email']),
+    provider_type: z.enum(['google', 'microsoft', 'email', 'linkedin']),
     provider_user_id: z.string().optional(),
     email: z.string().email(messages.email),
     access_token: z.string().optional(),
@@ -84,7 +84,7 @@ export const UpdateUserSchema = CreateUserSchema.partial();
 
 export const CreateAuthProviderSchema = z.object({
     user_id: z.string().uuid(),
-    provider_type: z.enum(['google', 'microsoft', 'email']),
+    provider_type: z.enum(['google', 'microsoft', 'email', 'linkedin']),
     provider_user_id: z.string().optional(),
     email: z.string().email(messages.email),
     access_token: z.string().optional(),
@@ -109,11 +109,25 @@ export const CreateRefreshTokenSchema = z.object({
 export const GoogleAuthSchema = z.object({
     code: z.string(),
     redirect_uri: z.string().url(),
+    state: z.string().optional()
 });
 
 export const MicrosoftAuthSchema = z.object({
     code: z.string(),
     redirect_uri: z.string().url(),
+    state: z.string().optional()
+});
+
+export const LinkedInAuthSchema = z.object({
+    code: z.string(),
+    redirect_uri: z.string().url(),
+    state: z.string().optional()
+});
+
+// OAuth initialization schema
+export const InitiateOAuthSchema = z.object({
+    redirect_uri: z.string().url('Invalid redirect URL'),
+    state_data: z.record(z.any()).optional(),
 });
 
 // Magic Link auth schemas
@@ -140,5 +154,6 @@ export type CreateRefreshToken = z.infer<typeof CreateRefreshTokenSchema>;
 
 export type GoogleAuth = z.infer<typeof GoogleAuthSchema>;
 export type MicrosoftAuth = z.infer<typeof MicrosoftAuthSchema>;
+export type LinkedInAuth = z.infer<typeof LinkedInAuthSchema>;
 export type SendMagicLink = z.infer<typeof SendMagicLinkSchema>;
 export type VerifyMagicLink = z.infer<typeof VerifyMagicLinkSchema>; 

@@ -41,6 +41,8 @@ const envSchema = z.object({
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     MICROSOFT_CLIENT_ID: z.string().optional(),
     MICROSOFT_CLIENT_SECRET: z.string().optional(),
+    LINKEDIN_CLIENT_ID: z.string().optional(),
+    LINKEDIN_CLIENT_SECRET: z.string().optional(),
 
     // Error Handling
     SHOW_ERROR_STACK: z.string().transform(val => val === 'true').default('false'),
@@ -94,6 +96,8 @@ export class Config {
     public static readonly GOOGLE_CLIENT_SECRET: string = process.env.GOOGLE_CLIENT_SECRET || '';
     public static readonly MICROSOFT_CLIENT_ID: string = process.env.MICROSOFT_CLIENT_ID || '';
     public static readonly MICROSOFT_CLIENT_SECRET: string = process.env.MICROSOFT_CLIENT_SECRET || '';
+    public static readonly LINKEDIN_CLIENT_ID: string = process.env.LINKEDIN_CLIENT_ID || '';
+    public static readonly LINKEDIN_CLIENT_SECRET: string = process.env.LINKEDIN_CLIENT_SECRET || '';
 
     // Error Handling
     public static readonly SHOW_ERROR_STACK: boolean = process.env.SHOW_ERROR_STACK === 'true';

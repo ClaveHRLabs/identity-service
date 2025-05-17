@@ -5,14 +5,35 @@ import { authenticate } from '../middlewares/authenticate';
 import {
     GoogleAuthValidator,
     MicrosoftAuthValidator,
+    LinkedInAuthValidator,
     SendMagicLinkValidator,
     VerifyMagicLinkValidator,
     RefreshTokenValidator,
-    LogoutValidator
+    LogoutValidator,
+    InitiateOAuthValidator
 } from '../validators/user.validator';
 
 export const createAuthRoutes = (authController: AuthController) => {
     const router = Router();
+
+    // Initialize OAuth flow routes
+    router.get(
+        '/google/authorize',
+        validateRequest(InitiateOAuthValidator),
+        authController.initiateGoogleAuth.bind(authController)
+    );
+
+    router.get(
+        '/microsoft/authorize',
+        validateRequest(InitiateOAuthValidator),
+        authController.initiateMicrosoftAuth.bind(authController)
+    );
+
+    router.get(
+        '/linkedin/authorize',
+        validateRequest(InitiateOAuthValidator),
+        authController.initiateLinkedInAuth.bind(authController)
+    );
 
     // Google OAuth authentication
     router.post(
@@ -26,6 +47,13 @@ export const createAuthRoutes = (authController: AuthController) => {
         '/microsoft',
         validateRequest(MicrosoftAuthValidator),
         authController.microsoftAuth.bind(authController)
+    );
+
+    // LinkedIn OAuth authentication
+    router.post(
+        '/linkedin',
+        validateRequest(LinkedInAuthValidator),
+        authController.linkedInAuth.bind(authController)
     );
 
     // Send magic link for email authentication

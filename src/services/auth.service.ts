@@ -18,51 +18,152 @@ export class AuthService {
     }
 
     /**
-     * Authenticate with Google OAuth
+     * Common method for OAuth authentication
+     * @param providerType OAuth provider (google or microsoft)
+     * @param code Authorization code
+     * @param redirectUri Redirect URI
+     * @param state Optional state for additional context/security
      */
-    async authenticateWithGoogle(code: string, redirectUri: string): Promise<{
+    private async authenticateWithOAuth(
+        providerType: 'google' | 'microsoft' | 'linkedin',
+        code: string,
+        redirectUri: string,
+        state?: string
+    ): Promise<{
         user: User;
         access_token: string;
         refresh_token: string;
     }> {
         try {
-            // Exchange code for tokens
-            const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
-                code,
-                client_id: Config.GOOGLE_CLIENT_ID,
-                client_secret: Config.GOOGLE_CLIENT_SECRET,
-                redirect_uri: redirectUri,
-                grant_type: 'authorization_code'
-            });
+            let tokenUrl: string;
+            let userInfoUrl: string;
+            let clientId: string;
+            let clientSecret: string;
+            let tokenRequestConfig: any = {};
+            let tokenRequestData: any;
 
+            // Configure provider-specific settings
+            if (providerType === 'google') {
+                tokenUrl = 'https://oauth2.googleapis.com/token';
+                userInfoUrl = 'https://www.googleapis.com/oauth2/v3/userinfo';
+                clientId = Config.GOOGLE_CLIENT_ID;
+                clientSecret = Config.GOOGLE_CLIENT_SECRET;
+                tokenRequestData = {
+                    code,
+                    client_id: clientId,
+                    client_secret: clientSecret,
+                    redirect_uri: redirectUri,
+                    grant_type: 'authorization_code'
+                };
+            } else if (providerType === 'linkedin') {
+                tokenUrl = 'https://www.linkedin.com/oauth/v2/authorization';
+                userInfoUrl = 'https://www.linkedin.com/oauth/v2/userinfo';
+                clientId = Config.LINKEDIN_CLIENT_ID;
+                clientSecret = Config.LINKEDIN_CLIENT_SECRET;
+                tokenRequestData = new URLSearchParams({
+                    response_type: 'code',
+                    client_id: clientId,
+                    redirect_uri: redirectUri,
+                    scope: 'openid profile email',
+                });
+                tokenRequestConfig = {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                };
+            } else {
+                tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+                userInfoUrl = 'https://graph.microsoft.com/v1.0/me';
+                clientId = Config.MICROSOFT_CLIENT_ID;
+                clientSecret = Config.MICROSOFT_CLIENT_SECRET;
+                tokenRequestData = new URLSearchParams({
+                    code,
+                    client_id: clientId,
+                    client_secret: clientSecret,
+                    redirect_uri: redirectUri,
+                    grant_type: 'authorization_code'
+                });
+                tokenRequestConfig = {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                };
+            }
+
+            // Exchange code for tokens
+            const tokenResponse = await axios.post(tokenUrl, tokenRequestData, tokenRequestConfig);
             const { access_token, refresh_token, expires_in } = tokenResponse.data;
 
-            // Get user info from Google
-            const userInfoResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+            // Get user info from provider
+            const userInfoResponse = await axios.get(userInfoUrl, {
                 headers: { Authorization: `Bearer ${access_token}` }
             });
 
-            const googleUser = userInfoResponse.data;
-            const email = googleUser.email;
+            const oauthUser = userInfoResponse.data;
+
+            // Extract user info based on provider
+            let email, firstName, lastName, displayName, avatarUrl, providerUserId, verified, metadata;
+
+            if (providerType === 'google') {
+                email = oauthUser.email;
+                firstName = oauthUser.given_name;
+                lastName = oauthUser.family_name;
+                displayName = oauthUser.name;
+                avatarUrl = oauthUser.picture;
+                providerUserId = oauthUser.sub;
+                verified = oauthUser.email_verified;
+                metadata = {
+                    name: oauthUser.name,
+                    picture: oauthUser.picture,
+                    locale: oauthUser.locale
+                };
+            } else if (providerType === 'linkedin') {
+                email = oauthUser.email;
+                firstName = oauthUser.givenName;
+                lastName = oauthUser.surname;
+                displayName = oauthUser.localizedFirstName + ' ' + oauthUser.localizedLastName;
+                avatarUrl = oauthUser.profilePicture.displayImage;
+                providerUserId = oauthUser.id;
+                verified = true; // LinkedIn accounts are considered verified
+                metadata = {
+                    display_name: oauthUser.localizedFirstName + ' ' + oauthUser.localizedLastName,
+                    job_title: oauthUser.localizedHeadline,
+                    office_location: oauthUser.location.name
+                };
+            } else {
+                email = oauthUser.mail || oauthUser.userPrincipalName;
+                firstName = oauthUser.givenName;
+                lastName = oauthUser.surname;
+                displayName = oauthUser.displayName;
+                providerUserId = oauthUser.id;
+                verified = true; // Microsoft accounts are considered verified
+                metadata = {
+                    display_name: oauthUser.displayName,
+                    job_title: oauthUser.jobTitle,
+                    office_location: oauthUser.officeLocation
+                };
+            }
 
             // Check if this email is already registered
             let user = await this.userService.getUserByEmail(email);
 
-            // Create a new user
-            user ??= await this.userService.createUser({
+            // Create a new user if not exists
+            if (!user) {
+                user = await this.userService.createUser({
                     email,
-                    first_name: googleUser.given_name,
-                    last_name: googleUser.family_name,
-                    display_name: googleUser.name,
-                    avatar_url: googleUser.picture,
-                    email_verified: googleUser.email_verified
+                    first_name: firstName,
+                    last_name: lastName,
+                    display_name: displayName,
+                    avatar_url: avatarUrl,
+                    email_verified: verified
                 });
+            }
 
             // Save or update auth provider
             const expiresAt = new Date();
             expiresAt.setSeconds(expiresAt.getSeconds() + expires_in);
 
-            const authProvider = await authProviderRepository.getAuthProviderByEmailAndType(email, 'google');
+            const authProvider = await authProviderRepository.getAuthProviderByEmailAndType(email, providerType);
 
             if (authProvider) {
                 // Update tokens
@@ -76,31 +177,43 @@ export class AuthService {
                 // Create new auth provider
                 await authProviderRepository.createAuthProvider({
                     user_id: user.id,
-                    provider_type: 'google',
-                    provider_user_id: googleUser.sub,
+                    provider_type: providerType,
+                    provider_user_id: providerUserId,
                     email,
                     access_token,
                     refresh_token,
                     token_expires_at: expiresAt,
-                    metadata: {
-                        name: googleUser.name,
-                        picture: googleUser.picture,
-                        locale: googleUser.locale
-                    }
+                    metadata
                 });
             }
 
             // Update last login time
             await this.userService.updateLastLogin(user.id);
 
-            // Generate JWT tokens
-            const jwt_access_token = generateAccessToken(user);
-            const jwt_refresh_token = generateRefreshToken(user);
+            // Parse state if provided
+            let stateData = {};
+            if (state) {
+                try {
+                    stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+                } catch (e) {
+                    logger.warn(`Failed to parse state: ${e}`);
+                }
+            }
+
+            // Generate JWT tokens (now async)
+            const [jwt_access_token, jwt_refresh_token] = await Promise.all([
+                generateAccessToken(user, stateData),
+                generateRefreshToken(user)
+            ]);
 
             // Save refresh token to database
             await refreshTokenRepository.createRefreshToken({
                 user_id: user.id,
-                device_info: { source: 'google_oauth' }
+                expiration_days: 7, // Default expiration
+                device_info: {
+                    source: `${providerType}_oauth`,
+                    state: stateData
+                }
             });
 
             return {
@@ -109,113 +222,103 @@ export class AuthService {
                 refresh_token: jwt_refresh_token
             };
         } catch (error) {
-            logger.error('Google authentication error', { error });
-            throw new AppError('Failed to authenticate with Google', 500, 'AUTH_ERROR');
+            logger.error(`${providerType} authentication error`, { error });
+            throw new AppError(`Failed to authenticate with ${providerType}`, 500, 'AUTH_ERROR');
         }
+    }
+
+    /**
+     * Authenticate with Google OAuth
+     */
+    async authenticateWithGoogle(code: string, redirectUri: string, state?: string): Promise<{
+        user: User;
+        access_token: string;
+        refresh_token: string;
+    }> {
+        return this.authenticateWithOAuth('google', code, redirectUri, state);
     }
 
     /**
      * Authenticate with Microsoft OAuth
      */
-    async authenticateWithMicrosoft(code: string, redirectUri: string): Promise<{
+    async authenticateWithMicrosoft(code: string, redirectUri: string, state?: string): Promise<{
         user: User;
         access_token: string;
         refresh_token: string;
     }> {
-        try {
-            // Exchange code for tokens
-            const tokenResponse = await axios.post('https://login.microsoftonline.com/common/oauth2/v2.0/token',
-                new URLSearchParams({
-                    code,
-                    client_id: Config.MICROSOFT_CLIENT_ID,
-                    client_secret: Config.MICROSOFT_CLIENT_SECRET,
-                    redirect_uri: redirectUri,
-                    grant_type: 'authorization_code'
-                }),
-                {
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    }
-                }
-            );
+        return this.authenticateWithOAuth('microsoft', code, redirectUri, state);
+    }
 
-            const { access_token, refresh_token, expires_in } = tokenResponse.data;
+    /**
+     * Authenticate with LinkedIn OAuth
+     */
+    async authenticateWithLinkedIn(code: string, redirectUri: string, state?: string): Promise<{
+        user: User;
+        access_token: string;
+        refresh_token: string;
+    }> {
+        return this.authenticateWithOAuth('linkedin', code, redirectUri, state);
+    }
 
-            // Get user info from Microsoft Graph API
-            const userInfoResponse = await axios.get('https://graph.microsoft.com/v1.0/me', {
-                headers: { Authorization: `Bearer ${access_token}` }
+    /**
+     * Generate OAuth authorization URL
+     * @param provider OAuth provider (google or microsoft)
+     * @param redirectUri Client redirect URI
+     * @param state Optional state parameter for additional context
+     */
+    getOAuthAuthorizationUrl(
+        provider: 'google' | 'microsoft' | 'linkedin',
+        redirectUri: string,
+        state?: string
+    ): string {
+        let url: string;
+        let clientId: string;
+
+        if (provider === 'google') {
+            url = 'https://accounts.google.com/o/oauth2/v2/auth';
+            clientId = Config.GOOGLE_CLIENT_ID;
+
+            const params = new URLSearchParams({
+                client_id: clientId,
+                redirect_uri: redirectUri,
+                response_type: 'code',
+                scope: 'email profile openid',
+                access_type: 'offline',
+                prompt: 'consent'
             });
 
-            const microsoftUser = userInfoResponse.data;
-            const email = microsoftUser.mail || microsoftUser.userPrincipalName;
+            if (state) params.append('state', state);
 
-            // Check if this email is already registered
-            let user = await this.userService.getUserByEmail(email);
+            return `${url}?${params.toString()}`;
+        } else if (provider === 'linkedin') {
+            url = 'https://www.linkedin.com/oauth/v2/authorization';
+            clientId = Config.LINKEDIN_CLIENT_ID;
 
-            if (!user) {
-                // Create a new user
-                user = await this.userService.createUser({
-                    email,
-                    first_name: microsoftUser.givenName,
-                    last_name: microsoftUser.surname,
-                    display_name: microsoftUser.displayName,
-                    email_verified: true // Microsoft accounts are considered verified
-                });
-            }
-
-            // Save or update auth provider
-            const expiresAt = new Date();
-            expiresAt.setSeconds(expiresAt.getSeconds() + expires_in);
-
-            const authProvider = await authProviderRepository.getAuthProviderByEmailAndType(email, 'microsoft');
-
-            if (authProvider) {
-                // Update tokens
-                await authProviderRepository.updateAuthProviderTokens(
-                    authProvider.id,
-                    access_token,
-                    refresh_token,
-                    expiresAt
-                );
-            } else {
-                // Create new auth provider
-                await authProviderRepository.createAuthProvider({
-                    user_id: user.id,
-                    provider_type: 'microsoft',
-                    provider_user_id: microsoftUser.id,
-                    email,
-                    access_token,
-                    refresh_token,
-                    token_expires_at: expiresAt,
-                    metadata: {
-                        display_name: microsoftUser.displayName,
-                        job_title: microsoftUser.jobTitle,
-                        office_location: microsoftUser.officeLocation
-                    }
-                });
-            }
-
-            // Update last login time
-            await this.userService.updateLastLogin(user.id);
-
-            // Generate JWT tokens
-            const jwt_access_token = generateAccessToken(user);
-            const jwt_refresh_token = generateRefreshToken(user);
-
-            // Save refresh token to database
-            await refreshTokenRepository.createRefreshToken({
-                user_id: user.id,
-                device_info: { source: 'microsoft_oauth' }
+            const params = new URLSearchParams({
+                client_id: clientId,
+                redirect_uri: redirectUri,
+                response_type: 'code',
+                scope: 'openid profile email',
             });
 
-            return {
-                user,
-                access_token: jwt_access_token,
-                refresh_token: jwt_refresh_token
-            };
-        } catch (error) {
-            logger.error('Microsoft authentication error', { error });
-            throw new AppError('Failed to authenticate with Microsoft', 500, 'AUTH_ERROR');
+            if (state) params.append('state', state);
+
+            return `${url}?${params.toString()}`;
+        } else {
+            url = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
+            clientId = Config.MICROSOFT_CLIENT_ID;
+
+            const params = new URLSearchParams({
+                client_id: clientId,
+                redirect_uri: redirectUri,
+                response_type: 'code',
+                scope: 'user.read openid profile email',
+                response_mode: 'query'
+            });
+
+            if (state) params.append('state', state);
+
+            return `${url}?${params.toString()}`;
         }
     }
 
@@ -316,13 +419,16 @@ export class AuthService {
             await this.userService.updateLastLogin(user.id);
 
             // Generate JWT tokens
-            const access_token = generateAccessToken(user);
-            const refresh_token = generateRefreshToken(user);
+            const [access_token, refresh_token] = await Promise.all([
+                generateAccessToken(user),
+                generateRefreshToken(user)
+            ]);
 
             // Save refresh token to database
             await refreshTokenRepository.createRefreshToken({
                 user_id: user.id,
-                device_info: { source: 'magic_link' }
+                expiration_days: 7, // Default expiration
+                device_info: { source: 'microsoft_oauth' }
             });
 
             return {
@@ -369,7 +475,7 @@ export class AuthService {
             }
 
             // Generate a new access token
-            const access_token = generateAccessToken(user);
+            const access_token = await generateAccessToken(user);
 
             return {
                 success: true,

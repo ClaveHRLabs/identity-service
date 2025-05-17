@@ -4,8 +4,10 @@ import {
     UpdateUserSchema,
     GoogleAuthSchema,
     MicrosoftAuthSchema,
+    LinkedInAuthSchema,
     SendMagicLinkSchema,
-    VerifyMagicLinkSchema
+    VerifyMagicLinkSchema,
+    InitiateOAuthSchema
 } from '../../models/schemas/user';
 
 // User management validators
@@ -49,6 +51,14 @@ export const GoogleAuthValidator = z.object({
 
 export const MicrosoftAuthValidator = z.object({
     body: MicrosoftAuthSchema
+});
+
+export const LinkedInAuthValidator = z.object({
+    body: LinkedInAuthSchema
+});
+
+export const InitiateOAuthValidator = z.object({
+    query: InitiateOAuthSchema
 });
 
 export const SendMagicLinkValidator = z.object({

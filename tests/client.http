@@ -2,8 +2,9 @@
 @baseUrl = http://localhost:3001
 @adminKey = your-admin-key-here
 @setupCode = ABCD123456
-@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTUxNjIzOTAyMn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
-@refreshToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIiwidHlwZSI6InJlZnJlc2giLCJpYXQiOjE1MTYyMzkwMjJ9.JL5WQAl0_KF_Qcvy1Zg2Ayww-Laa9JdcwNtZLMn9OjQ
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMjU2NjVlOS0zNThkLTQxY2UtYTc0Zi04Nzc1YmE0ODFjNDkiLCJlbWFpbCI6Im1hbmliYWJ1QGdvZXNzb3IuY29tIiwib3JnYW5pemF0aW9uSWQiOm51bGwsInR5cGUiOiJhY2Nlc3MiLCJhZGRpdGlvbmFsRGF0YSI6e30sImlhdCI6MTc0NzUwNTI0OSwiZXhwIjoxNzQ3NTA4ODQ5fQ.Gx2_P04qwMbvKB1pS1Yvz-wGkh_cJ_xRe5_k4KfG9DI
+
+@refreshToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMjU2NjVlOS0zNThkLTQxY2UtYTc0Zi04Nzc1YmE0ODFjNDkiLCJlbWFpbCI6Im1hbmliYWJ1QGdvZXNzb3IuY29tIiwib3JnYW5pemF0aW9uSWQiOm51bGwsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzQ3NTA1MjQ5LCJleHAiOjE3NDgxMTAwNDl9.SONyFoVxECiyX4vwkzeFeVnrda413geZwW9wziYkV0k
 
 ### Health Check
 GET {{baseUrl}}/health
@@ -54,22 +55,58 @@ Accept: application/json
 
 ### ===== AUTHENTICATION =====
 
-### Google Authentication
+### Step 1: Authorization Request (Browser URL - Not directly callable from HTTP client)
+# GET https://accounts.google.com/o/oauth2/v2/auth?client_id=YOUR_CLIENT_ID&redirect_uri=http://localhost:3001/api/auth/callback/google&response_type=code&scope=email%20profile%20openid&access_type=offline&prompt=consent&state=random_state_string
+# Note: In a real application, the user would be redirected to this URL in a browser
+
+### Get Google OAuth Authorization URL
+GET {{baseUrl}}/api/auth/google/authorize?redirect_uri=http://localhost:3001/api/auth/callback/google&state=random_state_string
+Accept: application/json
+
+### Step 2: Token Exchange for Google (After receiving authorization code from redirect)
 POST {{baseUrl}}/api/auth/google
 Content-Type: application/json
 
 {
-  "code": "4/P7q7W91a-oMsCeLvIaQm6bTrgtp7",
-  "redirect_uri": "http://localhost:3000/auth/callback"
+  "code": "4/0AUJR-x5TRBbfNqw5tXUb1ol5xbp7IvOpXmvaE7IGD9ir14IE9ScQNrg6fCJSBOhlRtUxyg",
+  "redirect_uri": "http://localhost:3001/api/auth/callback/google",
+  "state": "randomid"
 }
 
-### Microsoft Authentication
+### Step 1: Microsoft Authorization Request (Browser URL - Not directly callable from HTTP client)
+# GET https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=http://localhost:3001/api/auth/callback/microsoft&response_type=code&scope=user.read%20openid%20profile%20email&response_mode=query&state=random_state_string
+# Note: In a real application, the user would be redirected to this URL in a browser
+
+### Get Microsoft OAuth Authorization URL
+GET {{baseUrl}}/api/auth/microsoft/authorize?redirect_uri=http://localhost:3001/api/auth/callback/microsoft&state=random_state_string
+Accept: application/json
+
+### Step 2: Token Exchange for Microsoft (After receiving authorization code from redirect)
 POST {{baseUrl}}/api/auth/microsoft
 Content-Type: application/json
 
 {
   "code": "M.R3_BAY.c1f4c670-0520-c35c-e217-606a84ea3e0c",
-  "redirect_uri": "http://localhost:3000/auth/callback"
+  "redirect_uri": "http://localhost:3001/api/auth/callback/microsoft",
+  "state": "random_state_string"
+}
+
+### Step 1: LinkedIn Authorization Request (Browser URL - Not directly callable from HTTP client)
+# GET https://www.linkedin.com/oauth/v2/authorization?client_id=YOUR_CLIENT_ID&redirect_uri=http://localhost:3001/api/auth/callback/linkedin&response_type=code&scope=openid%20profile%20email&state=random_state_string
+# Note: In a real application, the user would be redirected to this URL in a browser
+
+### Get LinkedIn OAuth Authorization URL
+GET {{baseUrl}}/api/auth/linkedin/authorize?redirect_uri=http://localhost:3001/api/auth/callback/linkedin&state=random_state_string
+Accept: application/json
+
+### Step 2: Token Exchange for LinkedIn (After receiving authorization code from redirect)
+POST {{baseUrl}}/api/auth/linkedin
+Content-Type: application/json
+
+{
+  "code": "AQTXr_V8YUwV8dcZjZYB-0njUUUk2v7X15umcO8P9yQuJnNV5HYoz-6FqIzQiJHM_FeOff8j6O1uCE0l38DFoySAp7olUXB9",
+  "redirect_uri": "http://localhost:3001/api/auth/callback/linkedin",
+  "state": "random_state_string"
 }
 
 ### Send Magic Link
@@ -77,8 +114,8 @@ POST {{baseUrl}}/api/auth/magic-link
 Content-Type: application/json
 
 {
-  "email": "john.doe@example.com",
-  "redirect_uri": "http://localhost:3000/auth/callback"
+  "email": "manibabu.iitkgp@gmail.com",
+  "redirect_uri": "http://localhost:3001/auth/callback"
 }
 
 ### Verify Magic Link

@@ -10,12 +10,86 @@ export class AuthController {
     }
 
     /**
+     * Initiate Google OAuth flow by generating the authorization URL
+     */
+    async initiateGoogleAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { redirect_uri, state_data } = req.query;
+
+            // Create state parameter (base64 encoded JSON or random string)
+            let stateParam: string;
+
+            if (state_data) {
+                // If state data is provided, encode it as base64
+                stateParam = Buffer.from(JSON.stringify(state_data)).toString('base64');
+            } else {
+                // Otherwise generate a random state parameter
+                stateParam = Buffer.from(Math.random().toString(36).substring(2)).toString('base64');
+            }
+
+            const authUrl = this.authService.getOAuthAuthorizationUrl(
+                'google',
+                redirect_uri as string,
+                stateParam
+            );
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    authorization_url: authUrl,
+                    state: stateParam
+                }
+            });
+        } catch (error) {
+            logger.error('Error initiating Google authentication', { error });
+            next(error);
+        }
+    }
+
+    /**
+     * Initiate Microsoft OAuth flow by generating the authorization URL
+     */
+    async initiateMicrosoftAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { redirect_uri, state_data } = req.query;
+
+            // Create state parameter (base64 encoded JSON or random string)
+            let stateParam: string;
+
+            if (state_data) {
+                // If state data is provided, encode it as base64
+                stateParam = Buffer.from(JSON.stringify(state_data)).toString('base64');
+            } else {
+                // Otherwise generate a random state parameter
+                stateParam = Buffer.from(Math.random().toString(36).substring(2)).toString('base64');
+            }
+
+            const authUrl = this.authService.getOAuthAuthorizationUrl(
+                'microsoft',
+                redirect_uri as string,
+                stateParam
+            );
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    authorization_url: authUrl,
+                    state: stateParam
+                }
+            });
+        } catch (error) {
+            logger.error('Error initiating Microsoft authentication', { error });
+            next(error);
+        }
+    }
+
+    /**
      * Authenticate with Google OAuth
      */
     async googleAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const { code, redirect_uri } = req.body;
-            const result = await this.authService.authenticateWithGoogle(code, redirect_uri);
+            const { code, redirect_uri, state } = req.body;
+            const result = await this.authService.authenticateWithGoogle(code, redirect_uri, state);
 
             res.status(200).json({
                 success: true,
@@ -32,8 +106,8 @@ export class AuthController {
      */
     async microsoftAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
-            const { code, redirect_uri } = req.body;
-            const result = await this.authService.authenticateWithMicrosoft(code, redirect_uri);
+            const { code, redirect_uri, state } = req.body;
+            const result = await this.authService.authenticateWithMicrosoft(code, redirect_uri, state);
 
             res.status(200).json({
                 success: true,
@@ -138,6 +212,61 @@ export class AuthController {
             });
         } catch (error) {
             logger.error('Error logging out', { error });
+            next(error);
+        }
+    }
+
+    /**
+     * Initiate LinkedIn OAuth flow by generating the authorization URL
+     */
+    async initiateLinkedInAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { redirect_uri, state_data } = req.query;
+
+            // Create state parameter (base64 encoded JSON or random string)
+            let stateParam: string;
+
+            if (state_data) {
+                // If state data is provided, encode it as base64
+                stateParam = Buffer.from(JSON.stringify(state_data)).toString('base64');
+            } else {
+                // Otherwise generate a random state parameter
+                stateParam = Buffer.from(Math.random().toString(36).substring(2)).toString('base64');
+            }
+
+            const authUrl = this.authService.getOAuthAuthorizationUrl(
+                'linkedin',
+                redirect_uri as string,
+                stateParam
+            );
+
+            res.status(200).json({
+                success: true,
+                data: {
+                    authorization_url: authUrl,
+                    state: stateParam
+                }
+            });
+        } catch (error) {
+            logger.error('Error initiating LinkedIn authentication', { error });
+            next(error);
+        }
+    }
+
+    /**
+     * Authenticate with LinkedIn OAuth
+     */
+    async linkedInAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { code, redirect_uri, state } = req.body;
+            const result = await this.authService.authenticateWithLinkedIn(code, redirect_uri, state);
+
+            res.status(200).json({
+                success: true,
+                data: result
+            });
+        } catch (error) {
+            logger.error('LinkedIn authentication error', { error });
             next(error);
         }
     }
