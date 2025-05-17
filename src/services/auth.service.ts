@@ -4,7 +4,7 @@ import * as magicLinkRepository from '../db/magic-link';
 import * as refreshTokenRepository from '../db/refresh-token';
 import { User } from '../models/schemas/user';
 import { AppError } from '../api/middlewares/error-handler';
-import { generateAccessToken, generateRefreshToken } from '../utils/jwt';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { Config } from '../config/config';
 import axios from 'axios';
 
@@ -453,34 +453,60 @@ export class AuthService {
         access_token?: string;
     }> {
         try {
-            // Validate the refresh token in the database
-            const validation = await refreshTokenRepository.validateRefreshToken(refreshToken);
+            // First verify the JWT refresh token
+            try {
+                const decoded = await verifyRefreshToken(refreshToken);
 
-            if (!validation.valid || !validation.refreshToken) {
+                // Token is valid, get the user
+                const userId = decoded.sub;
+                const user = await this.userService.getUserById(userId);
+
+                if (!user) {
+                    return {
+                        success: false,
+                        message: 'User not found'
+                    };
+                }
+
+                // Generate a new access token
+                const access_token = await generateAccessToken(user);
+
                 return {
-                    success: false,
-                    message: validation.message || 'Invalid refresh token'
+                    success: true,
+                    access_token
+                };
+            } catch (jwtError) {
+                logger.warn('JWT refresh token validation failed, trying database token', { error: jwtError });
+
+                // If JWT verification fails, try database token validation as fallback
+                const validation = await refreshTokenRepository.validateRefreshToken(refreshToken);
+
+                if (!validation.valid || !validation.refreshToken) {
+                    return {
+                        success: false,
+                        message: validation.message || 'Invalid refresh token'
+                    };
+                }
+
+                // Get the user
+                const userId = validation.refreshToken.user_id;
+                const user = await this.userService.getUserById(userId);
+
+                if (!user) {
+                    return {
+                        success: false,
+                        message: 'User not found'
+                    };
+                }
+
+                // Generate a new access token
+                const access_token = await generateAccessToken(user);
+
+                return {
+                    success: true,
+                    access_token
                 };
             }
-
-            // Get the user
-            const userId = validation.refreshToken.user_id;
-            const user = await this.userService.getUserById(userId);
-
-            if (!user) {
-                return {
-                    success: false,
-                    message: 'User not found'
-                };
-            }
-
-            // Generate a new access token
-            const access_token = await generateAccessToken(user);
-
-            return {
-                success: true,
-                access_token
-            };
         } catch (error) {
             logger.error('Error refreshing token', { error });
             throw new AppError('Failed to refresh token', 500, 'AUTH_ERROR');
