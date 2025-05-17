@@ -10,6 +10,8 @@ The Identity Service is a crucial part of the ClaveHR platform responsible for u
 - Organization and user management
 - Secure password handling with bcrypt
 - PostgreSQL database integration
+- Organization profiles and setup code management
+- Idempotent organization onboarding with secure setup codes
 
 ## Technology Stack
 
@@ -26,17 +28,26 @@ The Identity Service is a crucial part of the ClaveHR platform responsible for u
 ```
 identity-service/
 ├── src/
+│   ├── api/               # API-related code
+│   │   ├── controllers/   # Route controllers
+│   │   ├── middlewares/   # Express middlewares
+│   │   ├── routes/        # API route definitions
+│   │   └── validators/    # Request validation schemas
 │   ├── config/            # Application configuration
 │   ├── db/                # Database connection and queries
-│   ├── middleware/        # Express middlewares
 │   ├── models/            # Data models and validation schemas
-│   ├── routes/            # API route definitions
+│   │   ├── interfaces/    # TypeScript interfaces
+│   │   └── schemas/       # Zod validation schemas
 │   ├── services/          # Business logic
 │   ├── utils/             # Utility functions
 │   └── app.ts             # Application entry point
+├── schema/                # Database schema and migrations
+│   ├── migrations/        # Migration SQL files
+│   └── schema.sql         # Current DB schema
 ├── tests/                 # Test files
 │   ├── unit/              # Unit tests
-│   └── integration/       # Integration tests
+│   ├── integration/       # Integration tests
+│   └── client.http        # API client examples
 └── ...
 ```
 
@@ -122,9 +133,25 @@ yarn test
 - `PUT /api/users/:id` - Update user
 - `DELETE /api/users/:id` - Delete user
 
+### Organizations
+
+- `POST /api/organizations` - Create an organization profile
+- `GET /api/organizations/:id` - Get organization profile by ID
+- `PUT /api/organizations/:id` - Update organization profile
+- `DELETE /api/organizations/:id` - Delete organization profile
+- `GET /api/organizations` - List organization profiles with optional filters
+
+### Setup Codes
+
+- `POST /api/setup-codes` - Create a new organization setup code
+- `GET /api/organizations/:organizationId/setup-codes` - Get all setup codes for an organization
+- `POST /api/setup-codes/validate` - Validate and use a setup code
+- `DELETE /api/setup-codes/:id` - Delete a setup code
+
 ### Health Check
 
 - `GET /health` - Check service health
+- `GET /ping` - Simple ping endpoint
 
 ## License
 

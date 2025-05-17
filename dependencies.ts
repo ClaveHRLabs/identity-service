@@ -1,4 +1,3 @@
-
 import db from './src/db/db';
 import express from 'express';
 import cors from 'cors';
@@ -6,11 +5,24 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import { Config } from './src/config/config';
-import { errorHandler } from './src/middleware/error-handler';
-import { requestIdMiddleware } from './src/middleware/request-id';
+import { errorHandler } from './src/api/middlewares/error-handler';
+import { requestIdMiddleware } from './src/api/middlewares/request-id';
+import { OrganizationService } from './src/services/organization.service';
+import { SetupCodeService } from './src/services/setup-code.service';
+import { OrganizationController } from './src/api/controllers/organization.controller';
+import { SetupCodeController } from './src/api/controllers/setup-code.controller';
+import { registerRoutes } from './src/api/routes';
 
 // Singleton: Database Pool
 export const dbPool = db;
+
+// Factory: Services
+export const organizationService = new OrganizationService();
+export const setupCodeService = new SetupCodeService(organizationService);
+
+// Factory: Controllers
+export const organizationController = new OrganizationController(organizationService);
+export const setupCodeController = new SetupCodeController(setupCodeService);
 
 /**
  * Create Express App with all middleware
@@ -67,6 +79,9 @@ export const createExpressApp = () => {
             timestamp: new Date().toISOString(),
         });
     });
+
+    // Register API routes
+    registerRoutes(app, organizationController, setupCodeController);
 
     // Error handling middleware (must be last)
     app.use(errorHandler);

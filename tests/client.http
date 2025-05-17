@@ -1,5 +1,5 @@
 ### Variables
-@baseUrl = http://localhost:3000
+@baseUrl = http://localhost:3001
 
 ### Health Check
 GET {{baseUrl}}/health
@@ -8,3 +8,72 @@ Accept: application/json
 ### Ping Service
 GET {{baseUrl}}/ping
 Accept: application/json
+
+### ===== ORGANIZATION PROFILES =====
+
+### Create Organization Profile
+POST {{baseUrl}}/api/organizations
+Content-Type: application/json
+
+{
+  "name": "Sample Company",
+  "industry": "Technology",
+  "size": "50-100",
+  "country": "United States",
+  "website": "https://example.com",
+  "description": "A sample company for testing the API",
+  "logo_url": "https://example.com/logo.png",
+  "primary_color": "#2563EB",
+  "secondary_color": "#1E3A8A"
+}
+
+### Get Organization Profile
+GET {{baseUrl}}/api/organizations/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+Accept: application/json
+
+### Update Organization Profile
+PUT {{baseUrl}}/api/organizations/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+Content-Type: application/json
+
+{
+  "name": "Updated Company Name",
+  "description": "Updated company description",
+  "primary_color": "#3B82F6"
+}
+
+### Delete Organization Profile
+DELETE {{baseUrl}}/api/organizations/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
+
+### List Organization Profiles
+GET {{baseUrl}}/api/organizations?status=active&subscription_tier=basic&limit=10&offset=0
+Accept: application/json
+
+### ===== ORGANIZATION SETUP CODES =====
+
+### Create Setup Code
+POST {{baseUrl}}/api/setup-codes
+Content-Type: application/json
+
+{
+  "organization_id": "d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e",
+  "expiration_hours": 48,
+  "data": {
+    "team_name": "HR Team",
+    "welcome_message": "Welcome to our organization!"
+  }
+}
+
+### Get Organization Setup Codes
+GET {{baseUrl}}/api/organizations/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e/setup-codes?includeUsed=false
+Accept: application/json
+
+### Validate Setup Code
+POST {{baseUrl}}/api/setup-codes/validate
+Content-Type: application/json
+
+{
+  "code": "ABCD123456"
+}
+
+### Delete Setup Code
+DELETE {{baseUrl}}/api/setup-codes/d9f0a3c1-db5e-4bbd-9c31-5e6d78e8c75e
