@@ -15,38 +15,12 @@ export class UserService {
             // Check if a user with this email already exists
             const existingUser = await userRepository.getUserByEmail(userData.email);
             if (existingUser) {
-                logger.warn('Failed to create user - email already exists', { email: userData.email });
-                throw new AppError('User with this email already exists', 409, 'CONFLICT');
+                logger.info('User with this email already exists, returning existing user', { email: userData.email });
+                return existingUser;
             }
 
             const newUser = await userRepository.createUser(userData);
             logger.info('User created successfully', { id: newUser.id, email: newUser.email });
-
-            // Assign default employee role to the new user
-            try {
-                // Get the employee role
-                const employeeRole = await roleRepository.getRoleByName('employee');
-                if (employeeRole) {
-                    // Assign the role
-                    await roleRepository.assignRoleToUser({
-                        user_id: newUser.id,
-                        role_id: employeeRole.id,
-                        organization_id: userData.organization_id
-                    });
-                    logger.info('Default employee role assigned to user', {
-                        userId: newUser.id,
-                        roleId: employeeRole.id
-                    });
-                } else {
-                    logger.warn('Could not find employee role to assign to new user', { userId: newUser.id });
-                }
-            } catch (roleError) {
-                // Don't fail user creation if role assignment fails
-                logger.error('Failed to assign default employee role', {
-                    userId: newUser.id,
-                    error: roleError instanceof Error ? roleError.message : 'Unknown error'
-                });
-            }
 
             return newUser;
         } catch (error) {
@@ -58,7 +32,9 @@ export class UserService {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 email: userData.email
             });
-            throw error;
+
+            // Rethrow the error or throw a new AppError
+            throw new AppError('Failed to create user', 500, 'INTERNAL_ERROR');
         }
     }
 

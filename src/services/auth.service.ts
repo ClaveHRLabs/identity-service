@@ -35,6 +35,12 @@ export class AuthService {
         refresh_token: string;
     }> {
         try {
+            logger.info(`Starting ${providerType} OAuth authentication`, {
+                redirectUri: redirectUri,
+                hasCode: !!code,
+                hasState: !!state
+            });
+
             let tokenUrl: string;
             let userInfoUrl: string;
             let clientId: string;
@@ -56,21 +62,41 @@ export class AuthService {
                     grant_type: 'authorization_code'
                 };
             } else if (providerType === 'linkedin') {
-                tokenUrl = 'https://www.linkedin.com/oauth/v2/authorization';
-                userInfoUrl = 'https://www.linkedin.com/oauth/v2/userinfo';
+                logger.info('Setting up LinkedIn authentication parameters');
+                tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
+                userInfoUrl = 'https://api.linkedin.com/v2/me';
                 clientId = Config.LINKEDIN_CLIENT_ID;
                 clientSecret = Config.LINKEDIN_CLIENT_SECRET;
-                tokenRequestData = new URLSearchParams({
-                    response_type: 'code',
-                    client_id: clientId,
-                    redirect_uri: redirectUri,
-                    scope: 'openid profile email',
-                });
+
+                // Check if we have the required configuration
+                if (!clientId || !clientSecret) {
+                    logger.error('LinkedIn OAuth configuration missing', {
+                        hasClientId: !!clientId,
+                        hasClientSecret: !!clientSecret
+                    });
+                    throw new Error('LinkedIn OAuth configuration missing');
+                }
+
+                // Create the form data for token request
+                const formData = new URLSearchParams();
+                formData.append('grant_type', 'authorization_code');
+                formData.append('code', code);
+                formData.append('client_id', clientId);
+                formData.append('client_secret', clientSecret);
+                formData.append('redirect_uri', redirectUri);
+
+                tokenRequestData = formData.toString();
                 tokenRequestConfig = {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     }
                 };
+
+                logger.info('LinkedIn token request data prepared', {
+                    tokenUrl,
+                    userInfoUrl,
+                    requestDataLength: tokenRequestData.length
+                });
             } else {
                 tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
                 userInfoUrl = 'https://graph.microsoft.com/v1.0/me';
@@ -91,15 +117,90 @@ export class AuthService {
             }
 
             // Exchange code for tokens
-            const tokenResponse = await axios.post(tokenUrl, tokenRequestData, tokenRequestConfig);
+            logger.info(`Making token request to ${tokenUrl}`);
+            let tokenResponse;
+            try {
+                tokenResponse = await axios.post(tokenUrl, tokenRequestData, tokenRequestConfig);
+                logger.info(`Token request successful for ${providerType}`);
+
+                // Log the entire token response for LinkedIn to help debug
+                if (providerType === 'linkedin') {
+                    logger.info('LinkedIn token response:', {
+                        data: JSON.stringify(tokenResponse.data),
+                        status: tokenResponse.status
+                    });
+                }
+            } catch (tokenError: any) {
+                logger.error(`Token request failed for ${providerType}`, {
+                    error: tokenError.message,
+                    status: tokenError.response?.status,
+                    data: tokenError.response?.data
+                });
+                throw new Error(`Failed to exchange code for tokens: ${tokenError.message}`);
+            }
+
             const { access_token, refresh_token, expires_in } = tokenResponse.data;
 
+            if (!access_token) {
+                logger.error(`No access token received from ${providerType}`, { responseData: tokenResponse.data });
+                throw new Error(`No access token received from ${providerType}`);
+            }
+
             // Get user info from provider
-            const userInfoResponse = await axios.get(userInfoUrl, {
-                headers: { Authorization: `Bearer ${access_token}` }
-            });
+            logger.info(`Fetching user info from ${userInfoUrl}`);
+            let userInfoResponse;
+            try {
+                userInfoResponse = await axios.get(userInfoUrl, {
+                    headers: { Authorization: `Bearer ${access_token}` }
+                });
+                logger.info(`User info request successful for ${providerType}`);
+            } catch (userInfoError: any) {
+                logger.error(`User info request failed for ${providerType}`, {
+                    error: userInfoError.message,
+                    status: userInfoError.response?.status,
+                    data: userInfoError.response?.data
+                });
+                throw new Error(`Failed to fetch user info: ${userInfoError.message}`);
+            }
 
             const oauthUser = userInfoResponse.data;
+            logger.info(`Received user data from ${providerType}`, {
+                hasEmail: !!oauthUser.email,
+                responseFields: Object.keys(oauthUser),
+                userData: providerType === 'linkedin' ? JSON.stringify(oauthUser) : undefined
+            });
+
+            // For LinkedIn, we need to make an additional call to get the email address
+            let linkedinEmail;
+            if (providerType === 'linkedin') {
+                try {
+                    logger.info('Making additional request for LinkedIn email');
+                    const emailResponse = await axios.get('https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))', {
+                        headers: { Authorization: `Bearer ${access_token}` }
+                    });
+
+                    logger.info('LinkedIn email response received', {
+                        data: JSON.stringify(emailResponse.data)
+                    });
+
+                    // Extract email from LinkedIn's email endpoint response
+                    if (emailResponse.data &&
+                        emailResponse.data.elements &&
+                        emailResponse.data.elements.length > 0 &&
+                        emailResponse.data.elements[0]['handle~'] &&
+                        emailResponse.data.elements[0]['handle~'].emailAddress) {
+                        linkedinEmail = emailResponse.data.elements[0]['handle~'].emailAddress;
+                        logger.info(`LinkedIn email extracted: ${linkedinEmail}`);
+                    }
+                } catch (emailError: any) {
+                    logger.error('Failed to retrieve LinkedIn email', {
+                        error: emailError.message,
+                        status: emailError.response?.status,
+                        data: emailError.response?.data
+                    });
+                    // Continue without email - we'll try to extract it later or throw an error
+                }
+            }
 
             // Extract user info based on provider
             let email, firstName, lastName, displayName, avatarUrl, providerUserId, verified, metadata;
@@ -118,18 +219,49 @@ export class AuthService {
                     locale: oauthUser.locale
                 };
             } else if (providerType === 'linkedin') {
-                email = oauthUser.email;
-                firstName = oauthUser.givenName;
-                lastName = oauthUser.surname;
-                displayName = oauthUser.localizedFirstName + ' ' + oauthUser.localizedLastName;
-                avatarUrl = oauthUser.profilePicture.displayImage;
+                // LinkedIn API v2 with r_liteprofile and r_emailaddress scopes
+                email = linkedinEmail; // Use email from separate request
+
+                // Extract profile data from LinkedIn API v2 format
+                firstName = oauthUser.localizedFirstName || oauthUser.firstName;
+                lastName = oauthUser.localizedLastName || oauthUser.lastName;
+                displayName = (firstName && lastName) ? `${firstName} ${lastName}` : undefined;
                 providerUserId = oauthUser.id;
                 verified = true; // LinkedIn accounts are considered verified
+
+                // LinkedIn doesn't directly return avatar URL in the basic profile
+
+                // If we still don't have an email, try various fields from the profile response
+                if (!email && oauthUser.emailAddress) {
+                    email = oauthUser.emailAddress;
+                }
+
+                // As a last resort, try other fields
+                if (!email && oauthUser.email) {
+                    email = oauthUser.email;
+                }
+
+                if (!email) {
+                    logger.error('No email found in LinkedIn profile', {
+                        profile: JSON.stringify(oauthUser),
+                        hasEmailResponse: !!linkedinEmail
+                    });
+                    throw new Error('LinkedIn profile is missing email address');
+                }
+
                 metadata = {
-                    display_name: oauthUser.localizedFirstName + ' ' + oauthUser.localizedLastName,
-                    job_title: oauthUser.localizedHeadline,
-                    office_location: oauthUser.location.name
+                    display_name: displayName,
+                    provider_id: providerUserId,
+                    profile_data: JSON.stringify(oauthUser)
                 };
+
+                logger.info('Extracted LinkedIn user info', {
+                    email,
+                    firstName,
+                    lastName,
+                    displayName,
+                    id: providerUserId
+                });
             } else {
                 email = oauthUser.mail || oauthUser.userPrincipalName;
                 firstName = oauthUser.givenName;
@@ -145,10 +277,12 @@ export class AuthService {
             }
 
             // Check if this email is already registered
+            logger.info(`Looking up user by email: ${email}`);
             let user = await this.userService.getUserByEmail(email);
 
             // Create a new user if not exists
             if (!user) {
+                logger.info(`Creating new user with email: ${email}`);
                 user = await this.userService.createUser({
                     email,
                     first_name: firstName,
@@ -157,6 +291,8 @@ export class AuthService {
                     avatar_url: avatarUrl,
                     email_verified: verified
                 });
+            } else {
+                logger.info(`Found existing user with email: ${email}`);
             }
 
             // Save or update auth provider
@@ -167,6 +303,7 @@ export class AuthService {
 
             if (authProvider) {
                 // Update tokens
+                logger.info(`Updating existing ${providerType} auth provider for user`);
                 await authProviderRepository.updateAuthProviderTokens(
                     authProvider.id,
                     access_token,
@@ -175,6 +312,7 @@ export class AuthService {
                 );
             } else {
                 // Create new auth provider
+                logger.info(`Creating new ${providerType} auth provider for user`);
                 await authProviderRepository.createAuthProvider({
                     user_id: user.id,
                     provider_type: providerType,
@@ -201,12 +339,14 @@ export class AuthService {
             }
 
             // Generate JWT tokens (now async)
+            logger.info('Generating JWT tokens for user');
             const [jwt_access_token, jwt_refresh_token] = await Promise.all([
                 generateAccessToken(user, stateData),
                 generateRefreshToken(user)
             ]);
 
             // Save refresh token to database
+            logger.info('Saving refresh token to database');
             await refreshTokenRepository.createRefreshToken({
                 user_id: user.id,
                 expiration_days: 7, // Default expiration
@@ -216,14 +356,18 @@ export class AuthService {
                 }
             });
 
+            logger.info(`${providerType} authentication successful for user: ${email}`);
             return {
                 user,
                 access_token: jwt_access_token,
                 refresh_token: jwt_refresh_token
             };
-        } catch (error) {
-            logger.error(`${providerType} authentication error`, { error });
-            throw new AppError(`Failed to authenticate with ${providerType}`, 500, 'AUTH_ERROR');
+        } catch (error: any) {
+            logger.error(`${providerType} authentication error`, {
+                error: error.message,
+                stack: error.stack
+            });
+            throw new AppError(`Failed to authenticate with ${providerType}: ${error.message}`, 500, 'AUTH_ERROR');
         }
     }
 
@@ -298,10 +442,16 @@ export class AuthService {
                 client_id: clientId,
                 redirect_uri: redirectUri,
                 response_type: 'code',
-                scope: 'openid profile email',
+                scope: 'r_liteprofile r_emailaddress',
             });
 
             if (state) params.append('state', state);
+
+            logger.info('Generated LinkedIn OAuth URL', {
+                url,
+                redirectUri,
+                scopes: 'r_liteprofile r_emailaddress'
+            });
 
             return `${url}?${params.toString()}`;
         } else {

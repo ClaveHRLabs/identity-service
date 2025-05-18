@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../../services/auth.service';
 import { logger } from '../../utils/logger';
+import { Config } from '../../config/config';
 
 export class AuthController {
     private readonly authService: AuthService;
@@ -259,6 +260,32 @@ export class AuthController {
     async linkedInAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { code, redirect_uri, state } = req.body;
+
+            // Validate required parameters
+            if (!code) {
+                logger.error('LinkedIn authentication failed: missing code parameter');
+                res.status(400).json({
+                    success: false,
+                    message: 'Authorization code is required'
+                });
+                return;
+            }
+
+            if (!redirect_uri) {
+                logger.error('LinkedIn authentication failed: missing redirect_uri parameter');
+                res.status(400).json({
+                    success: false,
+                    message: 'Redirect URI is required'
+                });
+                return;
+            }
+
+            logger.info('Processing LinkedIn authentication', {
+                hasCode: !!code,
+                redirect_uri,
+                hasState: !!state
+            });
+
             const result = await this.authService.authenticateWithLinkedIn(code, redirect_uri, state);
 
             res.status(200).json({
@@ -267,6 +294,39 @@ export class AuthController {
             });
         } catch (error) {
             logger.error('LinkedIn authentication error', { error });
+            next(error);
+        }
+    }
+
+    /**
+     * Debug endpoint for LinkedIn configuration (only available in development)
+     */
+    async debugLinkedInConfig(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            // Only allow this in development environment
+            if (Config.NODE_ENV !== 'development') {
+                res.status(404).json({
+                    success: false,
+                    message: 'Not found'
+                });
+                return;
+            }
+
+            // Check if LinkedIn is properly configured
+            const config = {
+                clientIdConfigured: !!Config.LINKEDIN_CLIENT_ID,
+                clientSecretConfigured: !!Config.LINKEDIN_CLIENT_SECRET,
+                nodeEnv: Config.NODE_ENV,
+                frontendUrl: Config.FRONTEND_URL
+            };
+
+            res.status(200).json({
+                success: true,
+                message: 'LinkedIn configuration debug information',
+                data: config
+            });
+        } catch (error) {
+            logger.error('Error in LinkedIn configuration debug endpoint', { error });
             next(error);
         }
     }

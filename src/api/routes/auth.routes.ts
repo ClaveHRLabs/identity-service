@@ -56,6 +56,12 @@ export const createAuthRoutes = (authController: AuthController) => {
         authController.linkedInAuth.bind(authController)
     );
 
+    // LinkedIn debug config endpoint (development only)
+    router.get(
+        '/linkedin/debug-config',
+        authController.debugLinkedInConfig.bind(authController)
+    );
+
     // Send magic link for email authentication
     router.post(
         '/magic-link',
