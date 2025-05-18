@@ -63,6 +63,12 @@ export class UserService {
             const newUser = await userRepository.createUser(userData);
             logger.info('User created successfully', { id: newUser.id, email: newUser.email });
 
+
+            // Organization ID should exist for setting up the role
+            if (!userData.organization_id) {
+                return newUser;
+            }
+
             // Assign default employee role to the new user
             try {
                 // Get the employee role
