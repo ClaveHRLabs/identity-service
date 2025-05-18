@@ -1,8 +1,17 @@
 import { logger } from '../utils/logger';
 import * as userRepository from '../db/user';
 import * as roleRepository from '../db/role';
+import * as organizationRepository from '../db/organization';
 import { CreateUser, UpdateUser, User } from '../models/schemas/user';
 import { AppError } from '../api/middlewares/error-handler';
+
+// List of common email providers that should not be used for domain matching
+const COMMON_EMAIL_PROVIDERS = [
+    'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
+    'icloud.com', 'aol.com', 'protonmail.com', 'mail.com',
+    'zoho.com', 'yandex.com', 'gmx.com', 'live.com',
+    'msn.com', 'me.com', 'inbox.com', 'fastmail.com'
+];
 
 export class UserService {
     /**
@@ -15,12 +24,70 @@ export class UserService {
             // Check if a user with this email already exists
             const existingUser = await userRepository.getUserByEmail(userData.email);
             if (existingUser) {
-                logger.info('User with this email already exists, returning existing user', { email: userData.email });
+                logger.warn('Failed to create user - email already exists', { email: userData.email });
                 return existingUser;
+            }
+
+            // If no organization_id is provided, try to match based on email domain
+            if (!userData.organization_id) {
+                const emailParts = userData.email.split('@');
+                if (emailParts.length === 2) {
+                    const emailDomain = emailParts[1].toLowerCase();
+
+                    // Skip common email providers
+                    if (!COMMON_EMAIL_PROVIDERS.includes(emailDomain)) {
+                        // Try to find a matching organization
+                        const organization = await organizationRepository.findOrganizationByEmailDomain(emailDomain);
+
+                        if (organization) {
+                            logger.info('Auto-assigning user to organization based on email domain', {
+                                email: userData.email,
+                                domain: emailDomain,
+                                organizationId: organization.id,
+                                organizationName: organization.name
+                            });
+                            userData.organization_id = organization.id;
+                        } else {
+                            logger.debug('No matching organization found for email domain', {
+                                emailDomain
+                            });
+                        }
+                    } else {
+                        logger.debug('Skipping domain matching for common email provider', {
+                            emailDomain
+                        });
+                    }
+                }
             }
 
             const newUser = await userRepository.createUser(userData);
             logger.info('User created successfully', { id: newUser.id, email: newUser.email });
+
+            // Assign default employee role to the new user
+            try {
+                // Get the employee role
+                const employeeRole = await roleRepository.getRoleByName('employee');
+                if (employeeRole) {
+                    // Assign the role
+                    await roleRepository.assignRoleToUser({
+                        user_id: newUser.id,
+                        role_id: employeeRole.id,
+                        organization_id: userData.organization_id
+                    });
+                    logger.info('Default employee role assigned to user', {
+                        userId: newUser.id,
+                        roleId: employeeRole.id
+                    });
+                } else {
+                    logger.warn('Could not find employee role to assign to new user', { userId: newUser.id });
+                }
+            } catch (roleError) {
+                // Don't fail user creation if role assignment fails
+                logger.error('Failed to assign default employee role', {
+                    userId: newUser.id,
+                    error: roleError instanceof Error ? roleError.message : 'Unknown error'
+                });
+            }
 
             return newUser;
         } catch (error) {
@@ -32,9 +99,6 @@ export class UserService {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 email: userData.email
             });
-
-            // Rethrow the error or throw a new AppError
-            throw new AppError('Failed to create user', 500, 'INTERNAL_ERROR');
         }
     }
 

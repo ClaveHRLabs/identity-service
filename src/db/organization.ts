@@ -165,4 +165,21 @@ export async function countOrganizationProfiles(
     );
 
     return parseInt(result.rows[0].count, 10);
+}
+
+/**
+ * Find organization by email domain
+ * This uses a simple LIKE query to match the email domain with website URLs
+ */
+export async function findOrganizationByEmailDomain(emailDomain: string): Promise<OrganizationProfile | null> {
+    const result = await db.query(
+        `SELECT * FROM organization_profiles
+         WHERE status = 'active'
+         AND website IS NOT NULL
+         AND website ILIKE $1
+         LIMIT 1`,
+        [`%${emailDomain}%`]
+    );
+    
+    return result.rows[0] || null;
 } 
