@@ -76,7 +76,7 @@ export class Config {
 
     // JWT Configuration
     public static readonly JWT_SECRET: string = process.env.JWT_SECRET || '';
-    public static readonly JWT_EXPIRATION: string = process.env.JWT_EXPIRATION || '1m';
+    public static readonly JWT_EXPIRATION: string = process.env.JWT_EXPIRATION || '1h';
     public static readonly JWT_REFRESH_SECRET: string = process.env.JWT_REFRESH_SECRET || '';
     public static readonly JWT_REFRESH_EXPIRATION: string = process.env.JWT_REFRESH_EXPIRATION || '7d';
 
