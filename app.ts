@@ -2,7 +2,7 @@ import { app, dbPool } from './dependencies';
 import { logger } from './src/utils/logger';
 
 // Start the server
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => {
     logger.info(`Identity Service running on port ${PORT}`);
     logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);

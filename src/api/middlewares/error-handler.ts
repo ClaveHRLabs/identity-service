@@ -73,8 +73,9 @@ export const errorHandler = (
             success: false,
             timestamp: new Date().toISOString(),
             requestId: (req as any).requestId,
+            message: err.message,
             error: {
-                code: err.code || 'ERROR',
+                type: err.code || 'ERROR',
                 message: err.message,
                 details: Config.SHOW_ERROR_DETAILS ? err.details : undefined,
                 stack: Config.SHOW_ERROR_STACK ? err.stack : undefined,
@@ -92,8 +93,9 @@ export const errorHandler = (
                 success: false,
                 timestamp: new Date().toISOString(),
                 requestId: (req as any).requestId,
+                message: 'An entry with the same unique identifier already exists',
                 error: {
-                    code: 'DUPLICATE_ENTRY',
+                    type: 'DUPLICATE_ENTRY',
                     message: 'An entry with the same unique identifier already exists',
                     details: Config.SHOW_ERROR_DETAILS ?
                         { constraint: pgError.constraint, detail: pgError.detail } : undefined,
@@ -109,8 +111,9 @@ export const errorHandler = (
                 success: false,
                 timestamp: new Date().toISOString(),
                 requestId: (req as any).requestId,
+                message: 'The request references a non-existent related resource',
                 error: {
-                    code: 'FOREIGN_KEY_VIOLATION',
+                    type: 'FOREIGN_KEY_VIOLATION',
                     message: 'The request references a non-existent related resource',
                     details: Config.SHOW_ERROR_DETAILS ?
                         { constraint: pgError.constraint, detail: pgError.detail } : undefined,
@@ -122,15 +125,18 @@ export const errorHandler = (
     }
 
     // Handle unexpected errors (not operational)
+    const errorMessage = Config.IS_PRODUCTION ?
+        'An unexpected error occurred' :
+        err.message || 'An unexpected error occurred';
+
     res.status(500).json({
         success: false,
         timestamp: new Date().toISOString(),
         requestId: (req as any).requestId,
+        message: errorMessage,
         error: {
-            code: 'INTERNAL_SERVER_ERROR',
-            message: Config.IS_PRODUCTION ?
-                'An unexpected error occurred' :
-                err.message || 'An unexpected error occurred',
+            type: 'INTERNAL_SERVER_ERROR',
+            message: errorMessage,
             stack: Config.SHOW_ERROR_STACK ? err.stack : undefined,
         },
     });

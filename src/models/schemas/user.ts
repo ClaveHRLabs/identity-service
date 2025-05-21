@@ -66,6 +66,7 @@ export const RefreshTokenSchema = z.object({
     created_at: z.date(),
     updated_at: z.date(),
     device_info: z.record(z.any()).optional(),
+    originalToken: z.string().optional(),
 });
 
 // Schemas for creating entities
@@ -101,6 +102,7 @@ export const CreateMagicLinkSchema = z.object({
 
 export const CreateRefreshTokenSchema = z.object({
     user_id: z.string().uuid(),
+    token: z.string().optional(),
     expiration_days: z.number().positive().default(7),
     device_info: z.record(z.any()).optional(),
 });

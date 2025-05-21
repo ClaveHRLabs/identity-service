@@ -1,13 +1,24 @@
 import db from './db';
 import { RefreshToken, CreateRefreshToken } from '../models/schemas/user';
 import { generateToken } from '../utils/token-generator';
+import crypto from 'crypto';
+
+/**
+ * Hash a token using MD5
+ */
+function hashToken(token: string): string {
+    return crypto.createHash('md5').update(token).digest('hex');
+}
 
 /**
  * Create a new refresh token
  */
 export async function createRefreshToken(data: CreateRefreshToken): Promise<RefreshToken> {
-    // Generate a secure random token
-    const token = generateToken(64);
+    // Generate a secure random token if not provided
+    const token = data.token || generateToken(64);
+
+    // Hash the token before storing
+    const hashedToken = hashToken(token);
 
     // Calculate expiration time (default 7 days)
     const expirationDays = data.expiration_days || 7;
@@ -21,11 +32,17 @@ export async function createRefreshToken(data: CreateRefreshToken): Promise<Refr
         RETURNING *`,
         [
             data.user_id,
-            token,
+            hashedToken, // Store hashed token
             expires_at,
             data.device_info || {}
         ]
     );
+
+    // If this is a newly generated token (not provided by caller),
+    // we need to return the original token in the result
+    if (!data.token) {
+        result.rows[0].originalToken = token;
+    }
 
     return result.rows[0];
 }
@@ -34,9 +51,12 @@ export async function createRefreshToken(data: CreateRefreshToken): Promise<Refr
  * Get refresh token by token string
  */
 export async function getRefreshTokenByToken(token: string): Promise<RefreshToken | null> {
+    // Hash the token before querying
+    const hashedToken = hashToken(token);
+
     const result = await db.query(
         'SELECT * FROM refresh_tokens WHERE token = $1',
-        [token]
+        [hashedToken]
     );
     return result.rows[0] || null;
 }
@@ -88,6 +108,7 @@ export async function validateRefreshToken(token: string): Promise<{
     refreshToken: RefreshToken | null;
     message?: string;
 }> {
+    // Hash the token before querying
     const refreshToken = await getRefreshTokenByToken(token);
 
     if (!refreshToken) {

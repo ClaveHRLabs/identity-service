@@ -106,6 +106,8 @@ export class UserService {
                 email: userData.email
             });
         }
+
+        throw new AppError('Failed to create user', 500, 'INTERNAL_SERVER_ERROR');
     }
 
     /**

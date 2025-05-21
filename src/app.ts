@@ -3,11 +3,20 @@ import express, { Express } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import helmet from 'helmet';
-import { createApiRouter } from './api/routes';
+import { registerRoutes } from './api/routes';
 import { errorHandler } from './api/middlewares/error-handler';
 import { requestIdMiddleware } from './api/middlewares/request-id';
+import { responseFormatter } from './api/middlewares/response-formatter';
 import { Config } from './config/config';
-import { logger } from './utils/logger';
+import { OrganizationController } from './api/controllers/organization.controller';
+import { SetupCodeController } from './api/controllers/setup-code.controller';
+import { UserController } from './api/controllers/user.controller';
+import { AuthController } from './api/controllers/auth.controller';
+import { AuthService } from './services/auth.service';
+import { OrganizationService } from './services/organization.service';
+import { SetupCodeService } from './services/setup-code.service';
+import { UserService } from './services/user.service';
+import { EmailService } from './services/email.service';
 
 export const createApp = (): Express => {
     // Validate critical configuration
@@ -16,17 +25,36 @@ export const createApp = (): Express => {
     // Create express app
     const app = express();
 
+    // Initialize services in dependency order
+    const emailService = new EmailService();
+    const userService = new UserService();
+    const organizationService = new OrganizationService();
+    const setupCodeService = new SetupCodeService(organizationService);
+    const authService = new AuthService(userService, emailService);
+
+    // Initialize controllers
+    const organizationController = new OrganizationController(organizationService);
+    const setupCodeController = new SetupCodeController(setupCodeService);
+    const userController = new UserController(userService);
+    const authController = new AuthController(authService);
+
     // Apply middlewares
     app.use(helmet());
     app.use(cors());
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
     app.use(morgan('common'));
-    app.use(requestIdMiddleware());
+    app.use(requestIdMiddleware);
+    app.use(responseFormatter);
 
     // Setup routes
-    const apiRouter = createApiRouter();
-    app.use(Config.API_PREFIX, apiRouter);
+    registerRoutes(
+        app,
+        organizationController,
+        setupCodeController,
+        userController,
+        authController
+    );
 
     // Apply error handler
     app.use(errorHandler);
@@ -34,45 +62,12 @@ export const createApp = (): Express => {
     return app;
 };
 
-// Function to validate critical configuration
-function validateConfiguration() {
-    // Check JWT configuration
-    if (!Config.JWT_SECRET || !Config.JWT_REFRESH_SECRET) {
-        logger.error('JWT_SECRET and JWT_REFRESH_SECRET must be set');
-        process.exit(1);
-    }
-
-    // Check OAuth providers
-    if (Config.LINKEDIN_CLIENT_ID && !Config.LINKEDIN_CLIENT_SECRET) {
-        logger.warn('LinkedIn OAuth configuration incomplete: LINKEDIN_CLIENT_SECRET missing');
-    }
-
-    if (!Config.LINKEDIN_CLIENT_ID && Config.LINKEDIN_CLIENT_SECRET) {
-        logger.warn('LinkedIn OAuth configuration incomplete: LINKEDIN_CLIENT_ID missing');
-    }
-
-    if (Config.LINKEDIN_CLIENT_ID && Config.LINKEDIN_CLIENT_SECRET) {
-        logger.info('LinkedIn OAuth configuration detected', {
-            clientIdLength: Config.LINKEDIN_CLIENT_ID.length,
-            clientSecretLength: Config.LINKEDIN_CLIENT_SECRET.length
-        });
-    }
-
-    // Similar checks for other providers
-    ['GOOGLE', 'MICROSOFT'].forEach(provider => {
-        const clientId = Config[`${provider}_CLIENT_ID`];
-        const clientSecret = Config[`${provider}_CLIENT_SECRET`];
-
-        if (clientId && !clientSecret) {
-            logger.warn(`${provider} OAuth configuration incomplete: ${provider}_CLIENT_SECRET missing`);
-        }
-
-        if (!clientId && clientSecret) {
-            logger.warn(`${provider} OAuth configuration incomplete: ${provider}_CLIENT_ID missing`);
-        }
-
-        if (clientId && clientSecret) {
-            logger.info(`${provider} OAuth configuration detected`);
-        }
-    });
+function validateConfiguration(): void {
+    // Validate required configuration values
+    Config.getRequired('JWT_SECRET');
+    Config.getRequired('JWT_REFRESH_SECRET');
+    Config.getRequired('ADMIN_KEY');
+    Config.getRequired('DB_NAME');
+    Config.getRequired('DB_USER');
+    Config.getRequired('DB_PASS');
 } 

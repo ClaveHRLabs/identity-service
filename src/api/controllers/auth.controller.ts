@@ -149,14 +149,23 @@ export class AuthController {
             if (!result.success) {
                 res.status(400).json({
                     success: false,
-                    message: result.message || 'Invalid magic link'
+                    message: result.message || 'Invalid magic link',
+                    error: {
+                        code: 'INVALID_MAGIC_LINK',
+                        message: result.message || 'Invalid magic link'
+                    },
+                    data: null
                 });
                 return;
             }
 
             res.status(200).json({
                 success: true,
-                data: result.tokens
+                message: 'Magic link verified successfully',
+                error: null,
+                data: {
+                    tokens: result.tokens
+                }
             });
         } catch (error) {
             logger.error('Error verifying magic link', { error });

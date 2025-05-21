@@ -345,10 +345,11 @@ export class AuthService {
                 generateRefreshToken(user)
             ]);
 
-            // Save refresh token to database
+            // Save refresh token to database - include the actual JWT token
             logger.info('Saving refresh token to database');
-            await refreshTokenRepository.createRefreshToken({
+            const dbRefreshToken = await refreshTokenRepository.createRefreshToken({
                 user_id: user.id,
+                token: jwt_refresh_token, // Store the JWT refresh token hash
                 expiration_days: 7, // Default expiration
                 device_info: {
                     source: `${providerType}_oauth`,
@@ -577,8 +578,9 @@ export class AuthService {
             // Save refresh token to database
             await refreshTokenRepository.createRefreshToken({
                 user_id: user.id,
+                token: refresh_token, // Store the JWT refresh token hash
                 expiration_days: 7, // Default expiration
-                device_info: { source: 'microsoft_oauth' }
+                device_info: { source: 'magic_link' }
             });
 
             return {
@@ -595,66 +597,72 @@ export class AuthService {
     }
 
     /**
-     * Refresh an access token using a refresh token
-     */
+ * Refresh an access token using a refresh token
+ */
     async refreshToken(refreshToken: string): Promise<{
         success: boolean;
         message?: string;
         access_token?: string;
     }> {
         try {
-            // First verify the JWT refresh token
-            try {
-                const decoded = await verifyRefreshToken(refreshToken);
+            logger.info('Processing refresh token request');
 
-                // Token is valid, get the user
-                const userId = decoded.sub;
+            // First verify the JWT token validity and extract the payload
+            let payload;
+            try {
+                payload = await verifyRefreshToken(refreshToken);
+
+                // Ensure this is a refresh token
+                if (payload.type !== 'refresh') {
+                    logger.warn('Invalid token type for refresh', { type: payload.type });
+                    return {
+                        success: false,
+                        message: 'Invalid token type'
+                    };
+                }
+
+                // Extract user ID from the JWT payload
+                const userId = payload.sub;
+                logger.info('JWT refresh token verified', { userId });
+
+                // Next, check if this token exists in our database for verification
+                const dbValidation = await refreshTokenRepository.validateRefreshToken(refreshToken);
+
+                if (!dbValidation.valid) {
+                    logger.warn('Refresh token not found in database or invalid', {
+                        message: dbValidation.message
+                    });
+                    return {
+                        success: false,
+                        message: dbValidation.message || 'Refresh token revoked or expired in database'
+                    };
+                }
+
+                // Get the user from the ID in the JWT
                 const user = await this.userService.getUserById(userId);
 
                 if (!user) {
+                    logger.warn('User not found for refresh token', { userId });
                     return {
                         success: false,
                         message: 'User not found'
                     };
                 }
 
-                // Generate a new access token
-                const access_token = await generateAccessToken(user);
+                // Generate only a new access token, not a new refresh token
+                const accessToken = await generateAccessToken(user);
+
+                logger.info('Access token refreshed successfully', { userId });
 
                 return {
                     success: true,
-                    access_token
+                    access_token: accessToken
                 };
             } catch (jwtError) {
-                logger.warn('JWT refresh token validation failed, trying database token', { error: jwtError });
-
-                // If JWT verification fails, try database token validation as fallback
-                const validation = await refreshTokenRepository.validateRefreshToken(refreshToken);
-
-                if (!validation.valid || !validation.refreshToken) {
-                    return {
-                        success: false,
-                        message: validation.message || 'Invalid refresh token'
-                    };
-                }
-
-                // Get the user
-                const userId = validation.refreshToken.user_id;
-                const user = await this.userService.getUserById(userId);
-
-                if (!user) {
-                    return {
-                        success: false,
-                        message: 'User not found'
-                    };
-                }
-
-                // Generate a new access token
-                const access_token = await generateAccessToken(user);
-
+                logger.error('Failed to verify JWT refresh token', { error: jwtError });
                 return {
-                    success: true,
-                    access_token
+                    success: false,
+                    message: 'Invalid refresh token signature or format'
                 };
             }
         } catch (error) {

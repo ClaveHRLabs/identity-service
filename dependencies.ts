@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import { Config } from './src/config/config';
 import { errorHandler } from './src/api/middlewares/error-handler';
 import { requestIdMiddleware } from './src/api/middlewares/request-id';
+import { responseFormatter } from './src/api/middlewares/response-formatter';
 import { OrganizationService } from './src/services/organization.service';
 import { SetupCodeService } from './src/services/setup-code.service';
 import { UserService } from './src/services/user.service';
@@ -73,6 +74,9 @@ export const createExpressApp = () => {
 
     // Request ID middleware
     app.use(requestIdMiddleware);
+
+    // Response formatter middleware
+    app.use(responseFormatter);
 
     // HTTP request logging - using simple morgan format
     app.use(morgan('combined'));
