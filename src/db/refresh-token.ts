@@ -77,9 +77,9 @@ export async function getRefreshTokensByUserId(userId: string): Promise<RefreshT
  */
 export async function revokeRefreshToken(id: string): Promise<RefreshToken | null> {
     const result = await db.query(
-        `UPDATE refresh_tokens 
-         SET revoked = true 
-         WHERE id = $1 
+        `UPDATE refresh_tokens
+         SET revoked = true
+         WHERE id = $1
          RETURNING *`,
         [id]
     );
