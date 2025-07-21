@@ -234,6 +234,22 @@ export const roleController = {
         }
     },
 
+    // Assign role to user by name
+    async assignRoleToUserByName(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { userId, roleName, organizationId } = req.body;
+            const userRole = await roleService.assignRoleToUserByName(userId, roleName, organizationId);
+
+            if (!userRole) {
+                return next(new AppError('Failed to assign role', 400, 'BAD_REQUEST'));
+            }
+
+            return res.status(201).json({ data: userRole });
+        } catch (error) {
+            next(error);
+        }
+    },
+
     // Remove role from user
     async removeRoleFromUser(req: Request, res: Response, next: NextFunction) {
         try {

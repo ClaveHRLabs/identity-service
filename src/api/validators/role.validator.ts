@@ -75,6 +75,14 @@ export const AssignRoleToUserValidator = z.object({
     body: AssignRoleSchema
 });
 
+export const AssignRoleToUserByNameValidator = z.object({
+    body: z.object({
+        userId: z.string().uuid('Invalid user ID'),
+        roleName: z.string().min(1, 'Role name is required'),
+        organizationId: z.string().uuid('Invalid organization ID').optional(),
+    })
+});
+
 export const RemoveRoleFromUserValidator = z.object({
     params: z.object({
         userId: z.string().uuid('Invalid user ID'),

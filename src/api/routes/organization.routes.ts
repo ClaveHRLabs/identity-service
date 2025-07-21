@@ -6,6 +6,7 @@ import { authenticate } from '../middlewares/authenticate';
 import { authorize } from '../middlewares/authorize';
 import {
     CreateOrganizationProfileValidator,
+    CreateOrganizationWithAdminValidator,
     UpdateOrganizationProfileValidator,
     GetOrganizationProfileValidator,
     DeleteOrganizationProfileValidator,
@@ -14,6 +15,7 @@ import {
     CompleteOrganizationSetupValidator
 } from '../validators/organization.validator';
 import { logger } from '../../utils/logger';
+import { Permission } from '../../models/enums/roles.enum';
 
 /**
  * Custom middleware to check for either a valid auth token or a setup code
@@ -48,16 +50,24 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
     router.post(
         '/',
         authOrSetupCode,
-        authorize('manage_organizations'),
+        authorize(Permission.MANAGE_ORGANIZATION_SETTINGS),
         validateRequest(CreateOrganizationProfileValidator),
         organizationController.createOrganization.bind(organizationController)
+    );
+    
+    // Create an organization and assign the current user as admin
+    router.post(
+        '/with-admin',
+        authenticate,
+        validateRequest(CreateOrganizationWithAdminValidator),
+        organizationController.createOrganizationWithAdmin.bind(organizationController)
     );
 
     // Get an organization profile by ID - requires setup code or view_all_users permission
     router.get(
         '/:id',
         authOrSetupCode,
-        authorize('view_all_users'),
+        authorize(Permission.VIEW_ALL_USERS),
         validateRequest(GetOrganizationProfileValidator),
         organizationController.getOrganization.bind(organizationController)
     );
@@ -66,7 +76,7 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
     router.put(
         '/:id',
         authOrSetupCode,
-        authorize('manage_organizations'),
+        authorize(Permission.MANAGE_ORGANIZATION_SETTINGS),
         validateRequest(UpdateOrganizationProfileValidator),
         organizationController.updateOrganization.bind(organizationController)
     );
@@ -75,7 +85,7 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
     router.patch(
         '/:id',
         authOrSetupCode,
-        authorize('manage_organizations'),
+        authorize(Permission.MANAGE_ORGANIZATION_SETTINGS),
         validateRequest(UpdateOrganizationProfileValidator),
         organizationController.updateOrganization.bind(organizationController)
     );
@@ -84,7 +94,7 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
     router.delete(
         '/:id',
         authOrSetupCode,
-        authorize('manage_organizations'),
+        authorize(Permission.MANAGE_ORGANIZATION_SETTINGS),
         validateRequest(DeleteOrganizationProfileValidator),
         organizationController.deleteOrganization.bind(organizationController)
     );
@@ -102,7 +112,7 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
     router.patch(
         '/:id/branding',
         authOrSetupCode,
-        authorize('manage_organizations'),
+        authorize(Permission.MANAGE_ORGANIZATION_SETTINGS),
         validateRequest(UpdateOrganizationBrandingValidator),
         organizationController.updateOrganizationBranding.bind(organizationController)
     );
@@ -111,7 +121,7 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
     router.post(
         '/:id/complete-setup',
         authOrSetupCode,
-        authorize('manage_organizations'),
+        authorize(Permission.MANAGE_ORGANIZATION_SETTINGS),
         validateRequest(CompleteOrganizationSetupValidator),
         organizationController.completeOrganizationSetup.bind(organizationController)
     );

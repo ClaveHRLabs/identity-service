@@ -36,7 +36,7 @@ export const roleService = new RoleService();
 export const roleAssignmentService = new RoleAssignmentService();
 
 // Factory: Controllers
-export const organizationController = new OrganizationController(organizationService);
+export const organizationController = new OrganizationController(organizationService, roleService);
 export const setupCodeController = new SetupCodeController(setupCodeService);
 export const userController = new UserController(userService);
 export const authController = new AuthController(authService);

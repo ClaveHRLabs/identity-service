@@ -4,6 +4,7 @@ import * as roleRepository from '../db/role';
 import * as organizationRepository from '../db/organization';
 import { CreateUser, UpdateUser, User } from '../models/schemas/user';
 import { AppError } from '../api/middlewares/error-handler';
+import { ROLES } from '../models/enums/constants';
 
 // List of common email providers that should not be used for domain matching
 const COMMON_EMAIL_PROVIDERS = [
@@ -69,27 +70,34 @@ export class UserService {
                 return newUser;
             }
 
-            // Assign default employee role to the new user
+            // Assign default role to the new user
             try {
-                // Get the employee role
-                const employeeRole = await roleRepository.getRoleByName('employee');
-                if (employeeRole) {
+                // Get the appropriate role - if user is the creator of the organization, assign admin role
+                const isOrgCreator = userData.is_organization_creator === true;
+                const roleName = isOrgCreator ? ROLES.ADMIN : ROLES.EMPLOYEE;
+                
+                const role = await roleRepository.getRoleByName(roleName);
+                if (role) {
                     // Assign the role
                     await roleRepository.assignRoleToUser({
                         user_id: newUser.id,
-                        role_id: employeeRole.id,
+                        role_id: role.id,
                         organization_id: userData.organization_id
                     });
-                    logger.info('Default employee role assigned to user', {
+                    logger.info(`Default ${roleName} role assigned to user`, {
                         userId: newUser.id,
-                        roleId: employeeRole.id
+                        roleId: role.id,
+                        roleName
                     });
                 } else {
-                    logger.warn('Could not find employee role to assign to new user', { userId: newUser.id });
+                    logger.warn(`Could not find ${roleName} role to assign to new user`, { 
+                        userId: newUser.id,
+                        roleName
+                    });
                 }
             } catch (roleError) {
                 // Don't fail user creation if role assignment fails
-                logger.error('Failed to assign default employee role', {
+                logger.error('Failed to assign default role', {
                     userId: newUser.id,
                     error: roleError instanceof Error ? roleError.message : 'Unknown error'
                 });

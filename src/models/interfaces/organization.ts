@@ -1,3 +1,20 @@
+export interface OrganizationJoinSettings {
+    allow_public_join: boolean;
+    require_approval: boolean;
+    allow_invite_only: boolean;
+    max_members?: number;
+    auto_approve_domains: string[];
+    blocked_domains: string[];
+}
+
+export interface OrganizationLoginSettings {
+    allow_email_login: boolean;
+    allow_oauth_login: boolean;
+    allowed_oauth_providers: string[];
+    require_mfa: boolean;
+    session_timeout_minutes: number;
+}
+
 export interface OrganizationProfile {
     id: string;
     name: string;
@@ -17,6 +34,9 @@ export interface OrganizationProfile {
     subscription_tier: string;
     subscription_status: string;
     trial_ends_at?: Date;
+    join_settings?: OrganizationJoinSettings;
+    login_settings?: OrganizationLoginSettings;
+    metadata?: Record<string, any>;
     created_at: Date;
     updated_at: Date;
 }

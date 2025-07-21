@@ -11,6 +11,14 @@ export const CreateOrganizationProfileValidator = z.object({
     body: CreateOrganizationProfileSchema
 });
 
+// Create organization with admin role validator
+export const CreateOrganizationWithAdminValidator = z.object({
+    body: z.object({
+        organizationData: CreateOrganizationProfileSchema,
+        userId: z.string().uuid('Invalid user ID')
+    })
+});
+
 export const UpdateOrganizationProfileValidator = z.object({
     params: z.object({
         id: z.string().uuid('Invalid organization ID')

@@ -11,6 +11,7 @@ import {
     ListUsersValidator,
     GetCurrentUserValidator
 } from '../validators/user.validator';
+import { Permission } from '../../models/enums/roles.enum';
 
 export const createUserRoutes = (userController: UserController) => {
     const router = Router();
@@ -19,7 +20,7 @@ export const createUserRoutes = (userController: UserController) => {
     router.post(
         '/',
         authenticate,
-        authorize('manage_users'),
+        authorize(Permission.MANAGE_USERS),
         validateRequest(CreateUserValidator),
         userController.createUser.bind(userController)
     );
@@ -37,7 +38,7 @@ export const createUserRoutes = (userController: UserController) => {
     router.get(
         '/:id',
         authenticate,
-        authorize('view_all_users'),
+        authorize(Permission.VIEW_ALL_USERS),
         validateRequest(GetUserValidator),
         userController.getUser.bind(userController)
     );
@@ -46,7 +47,7 @@ export const createUserRoutes = (userController: UserController) => {
     router.put(
         '/:id',
         authenticate,
-        authorize('manage_users'),
+        authorize(Permission.MANAGE_USERS),
         validateRequest(UpdateUserValidator),
         userController.updateUser.bind(userController)
     );
@@ -55,7 +56,7 @@ export const createUserRoutes = (userController: UserController) => {
     router.delete(
         '/:id',
         authenticate,
-        authorize('manage_users'),
+        authorize(Permission.MANAGE_USERS),
         validateRequest(DeleteUserValidator),
         userController.deleteUser.bind(userController)
     );
@@ -64,7 +65,7 @@ export const createUserRoutes = (userController: UserController) => {
     router.get(
         '/',
         authenticate,
-        authorize('view_all_users'),
+        authorize(Permission.VIEW_ALL_USERS),
         validateRequest(ListUsersValidator),
         userController.listUsers.bind(userController)
     );

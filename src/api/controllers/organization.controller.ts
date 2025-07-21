@@ -1,12 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 import { OrganizationService } from '../../services/organization.service';
+import { RoleService } from '../../services/role.service';
 import { logger } from '../../utils/logger';
+import { ROLES } from '../../models/enums/constants';
 
 export class OrganizationController {
     private organizationService: OrganizationService;
+    private roleService: RoleService;
 
-    constructor(organizationService: OrganizationService) {
+    constructor(organizationService: OrganizationService, roleService?: RoleService) {
         this.organizationService = organizationService;
+        this.roleService = roleService || new RoleService();
     }
 
     /**
@@ -28,6 +32,59 @@ export class OrganizationController {
             });
         } catch (error) {
             logger.error('Error creating organization', { error });
+            next(error);
+        }
+    }
+
+    /**
+     * Create a new organization and assign the current user as admin
+     */
+    async createOrganizationWithAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { organizationData, userId } = req.body;
+
+            if (!userId) {
+                res.status(400).json({
+                    success: false,
+                    message: 'User ID is required'
+                });
+                return;
+            }
+
+            // Create the organization
+            const organization = await this.organizationService.createOrganizationProfile(
+                organizationData
+            );
+
+            // Assign the user as admin
+            try {
+                await this.roleService.assignRoleToUserByName(
+                    userId,
+                    ROLES.ADMIN,
+                    organization.id
+                );
+                
+                logger.info('User assigned as admin for new organization', {
+                    userId,
+                    organizationId: organization.id
+                });
+            } catch (roleError) {
+                logger.error('Failed to assign admin role to user', {
+                    error: roleError,
+                    userId,
+                    organizationId: organization.id
+                });
+                
+                // Continue with the response even if role assignment fails
+                // The organization was created successfully
+            }
+
+            res.status(201).json({
+                success: true,
+                data: organization
+            });
+        } catch (error) {
+            logger.error('Error creating organization with admin', { error });
             next(error);
         }
     }

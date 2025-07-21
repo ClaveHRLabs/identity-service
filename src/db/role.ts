@@ -202,7 +202,59 @@ export async function assignRoleToUser(data: AssignRole): Promise<UserRole> {
         [data.user_id, data.role_id, data.organization_id || null]
     );
 
+    // update users table with the organization_id
+    const userResult = await db.query(
+        `UPDATE users SET organization_id = $1 WHERE id = $2`,
+        [data.organization_id || null, data.user_id]
+    );
+
+    if (userResult.rowCount === 0) {
+        throw new Error('Failed to update user organization_id');
+    }
+
     return result.rows[0];
+}
+
+// Assign role to user by role name
+export async function assignRoleToUserByName(userId: string, roleName: string, organizationId?: string): Promise<UserRole | null> {
+    try {
+        // First get the role ID from the role name
+        const roleResult = await db.query(
+            'SELECT id FROM roles WHERE name = $1',
+            [roleName]
+        );
+        
+        if (roleResult.rows.length === 0) {
+            return null; // Role not found
+        }
+        
+        const roleId = roleResult.rows[0].id;
+        
+        // Then assign the role using the role ID
+        const result = await db.query(
+            `INSERT INTO user_roles (user_id, role_id, organization_id) 
+             VALUES ($1, $2, $3) 
+             ON CONFLICT (user_id, role_id, organization_id) DO UPDATE 
+             SET updated_at = NOW() 
+             RETURNING *`,
+            [userId, roleId, organizationId || null]
+        );
+
+        // update users table with the organization_id
+        const userResult = await db.query(
+            `UPDATE users SET organization_id = $1 WHERE id = $2`,
+            [organizationId || null, userId]
+        );
+        
+        if (userResult.rowCount === 0) {
+            throw new Error('Failed to update user organization_id');
+        }
+
+        return result.rows[0];
+    } catch (error) {
+        console.error('Error assigning role by name:', error);
+        return null;
+    }
 }
 
 // Remove role from user

@@ -79,6 +79,7 @@ export const CreateUserSchema = z.object({
     organization_id: z.string().uuid().optional(),
     metadata: z.record(z.any()).optional(),
     preferences: z.record(z.any()).optional(),
+    is_organization_creator: z.boolean().optional(),
 });
 
 export const UpdateUserSchema = CreateUserSchema.partial();

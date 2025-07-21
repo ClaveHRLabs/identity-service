@@ -291,6 +291,41 @@ export class RoleService {
         }
     }
 
+    // Assign role to user by role name
+    async assignRoleToUserByName(userId: string, roleName: string, organizationId?: string): Promise<UserRole | null> {
+        logger.info('Assigning role to user by name', {
+            userId,
+            roleName,
+            organizationId
+        });
+
+        try {
+            // First check if the role exists
+            const role = await this.getRoleByName(roleName);
+            if (!role) {
+                logger.warn('Role not found for assignment', { roleName });
+                throw new AppError(`Role '${roleName}' not found`, 404, 'NOT_FOUND');
+            }
+
+            // Create assignment data
+            const assignData: AssignRole = {
+                user_id: userId,
+                role_id: role.id,
+                organization_id: organizationId
+            };
+
+            // Assign the role
+            return await roleRepository.assignRoleToUser(assignData);
+        } catch (error) {
+            logger.error('Failed to assign role to user by name', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                userId,
+                roleName
+            });
+            throw error;
+        }
+    }
+
     // Remove role from user
     async removeRoleFromUser(userId: string, roleId: string, organizationId?: string): Promise<boolean> {
         logger.info('Removing role from user', {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ORGANIZATION_STATUS, SUBSCRIPTION_TIER, SUBSCRIPTION_STATUS } from '../enums/constants';
 
 // Common validation patterns and error messages
 const messages = {
@@ -9,6 +10,25 @@ const messages = {
 
 // Color validation regex (hex code)
 const colorRegex = /^#[0-9A-Fa-f]{6}$/;
+
+// Organization join settings schema
+export const OrganizationJoinSettingsSchema = z.object({
+    allow_public_join: z.boolean().default(false),
+    require_approval: z.boolean().default(true),
+    allow_invite_only: z.boolean().default(true),
+    max_members: z.number().positive().optional(),
+    auto_approve_domains: z.array(z.string()).default([]),
+    blocked_domains: z.array(z.string()).default([]),
+});
+
+// Organization login settings schema
+export const OrganizationLoginSettingsSchema = z.object({
+    allow_email_login: z.boolean().default(true),
+    allow_oauth_login: z.boolean().default(true),
+    allowed_oauth_providers: z.array(z.string()).default(['google', 'microsoft', 'linkedin']),
+    require_mfa: z.boolean().default(false),
+    session_timeout_minutes: z.number().positive().default(480),
+});
 
 // Base organization profile schema
 export const OrganizationProfileSchema = z.object({
@@ -24,12 +44,29 @@ export const OrganizationProfileSchema = z.object({
     logo_url: z.string().url(messages.invalidUrl).optional(),
     primary_color: z.string().regex(colorRegex, messages.invalidColor).optional(),
     secondary_color: z.string().regex(colorRegex, messages.invalidColor).optional(),
-    status: z.enum(['active', 'inactive', 'suspended']).default('active'),
+    status: z.enum([
+        ORGANIZATION_STATUS.ACTIVE,
+        ORGANIZATION_STATUS.INACTIVE,
+        ORGANIZATION_STATUS.SUSPENDED
+    ]).default(ORGANIZATION_STATUS.ACTIVE),
     timezone: z.string().default('UTC'),
     locale: z.string().default('en-US'),
-    subscription_tier: z.enum(['free', 'basic', 'pro', 'enterprise']).default('basic'),
-    subscription_status: z.enum(['trial', 'active', 'expired', 'cancelled']).default('trial'),
+    subscription_tier: z.enum([
+        SUBSCRIPTION_TIER.FREE,
+        SUBSCRIPTION_TIER.BASIC,
+        SUBSCRIPTION_TIER.PRO,
+        SUBSCRIPTION_TIER.ENTERPRISE
+    ]).default(SUBSCRIPTION_TIER.BASIC),
+    subscription_status: z.enum([
+        SUBSCRIPTION_STATUS.TRIAL,
+        SUBSCRIPTION_STATUS.ACTIVE,
+        SUBSCRIPTION_STATUS.EXPIRED,
+        SUBSCRIPTION_STATUS.CANCELLED
+    ]).default(SUBSCRIPTION_STATUS.TRIAL),
     trial_ends_at: z.date().optional(),
+    join_settings: OrganizationJoinSettingsSchema.optional(),
+    login_settings: OrganizationLoginSettingsSchema.optional(),
+    metadata: z.record(z.any()).optional(),
     created_at: z.date(),
     updated_at: z.date(),
 });
