@@ -41,8 +41,8 @@ export const responseFormatter = (
             requestId: (req as any).requestId || 'unknown',
             success: res.statusCode < 400,
             message: '',
-            error: undefined,
-            data: undefined,
+            error: undefined as { type: string; message: string } | undefined,
+            data: undefined as any | undefined,
         };
 
         // Handle success case
@@ -60,10 +60,10 @@ export const responseFormatter = (
                 } else if (Object.keys(body).length > 0) {
                     // Skip forwarding 'success' property
                     if ('success' in body && Object.keys(body).length === 1) {
-                        standardResponse.data = null;
+                        standardResponse.data = undefined;
                     } else {
                         const { success, ...rest } = body;
-                        standardResponse.data = Object.keys(rest).length > 0 ? rest : null;
+                        standardResponse.data = Object.keys(rest).length > 0 ? rest : undefined;
                     }
                 }
             } else {
@@ -83,18 +83,18 @@ export const responseFormatter = (
                     standardResponse.error = {
                         type: body.error.code || 'ERROR',
                         message: body.error.message || standardResponse.message || 'An error occurred'
-                    };
+                    } as { type: string; message: string };
                 } else {
                     standardResponse.error = {
                         type: 'ERROR',
                         message: standardResponse.message || 'An error occurred'
-                    };
+                    } as { type: string; message: string };
                 }
             } else {
                 standardResponse.error = {
                     type: 'ERROR',
                     message: typeof body === 'string' ? body : 'An error occurred'
-                };
+                } as { type: string; message: string };
             }
 
             // Set generic message if not already set

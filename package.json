@@ -34,6 +34,7 @@
     "@types/express-rate-limit": "^6.0.2",
     "@types/jest": "^29.5.11",
     "@types/jsonwebtoken": "^9.0.5",
+    "@types/morgan": "^1.9.10",
     "@types/node": "^20.11.16",
     "@types/pg": "^8.10.9",
     "@types/uuid": "^9.0.8",

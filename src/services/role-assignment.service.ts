@@ -65,7 +65,7 @@ export class RoleAssignmentService {
                     UserRole.SUCCESSION_PLANNER
                 ];
 
-                if (assignableRoles.includes(roleToAssign)) {
+                if (assignableRoles.includes(roleToAssign as UserRole)) {
                     return true;
                 }
             }
@@ -84,7 +84,7 @@ export class RoleAssignmentService {
                     UserRole.TEAM_MANAGER
                 ];
 
-                if (assignableRoles.includes(roleToAssign)) {
+                if (assignableRoles.includes(roleToAssign as UserRole)) {
                     return true;
                 }
             }
