@@ -24,6 +24,7 @@ export const UserSchema = z.object({
     organization_id: z.string().uuid().optional(),
     metadata: z.record(z.any()).optional(),
     preferences: z.record(z.any()).optional(),
+    roles: z.array(z.string()).optional(),
     last_login_at: z.date().optional(),
     created_at: z.date(),
     updated_at: z.date(),

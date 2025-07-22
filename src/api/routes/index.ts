@@ -9,7 +9,6 @@ import { createSetupCodeRoutes } from './setup-code.routes';
 import { createUserRoutes } from './user.routes';
 import { createAuthRoutes } from './auth.routes';
 import roleRoutes from './role.routes';
-import employeeRoutes from './employee.routes';
 import { validateRequest } from '../middlewares/validate-request';
 import { ListSetupCodesValidator } from '../validators/organization.validator';
 
@@ -33,7 +32,6 @@ export const registerRoutes = (
     app.use(`${apiPrefix}/users`, userRouter);
     app.use(`${apiPrefix}/auth`, authRouter);
     app.use(`${apiPrefix}/roles`, roleRoutes);
-    app.use(`${apiPrefix}/employees`, employeeRoutes);
 
     // Register the route for getting all setup codes for an organization
     // This is defined here because it uses both organization and setup code routes

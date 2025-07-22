@@ -28,19 +28,67 @@ export async function createUser(data: CreateUser): Promise<User> {
 }
 
 /**
- * Get user by ID
+ * Get user by ID with roles
  */
 export async function getUserById(id: string): Promise<User | null> {
-    const result = await db.query('SELECT * FROM users WHERE id = $1', [id]);
-    return result.rows[0] || null;
+    try {
+        // First get the user
+        const userResult = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+        if (userResult.rowCount === 0) {
+            return null;
+        }
+        
+        const user = userResult.rows[0];
+        
+        // Then get user roles
+        const rolesResult = await db.query(
+            `SELECT r.name 
+            FROM roles r 
+            INNER JOIN user_roles ur ON r.id = ur.role_id 
+            WHERE ur.user_id = $1`, 
+            [id]
+        );
+        
+        // Add roles to user object
+        user.roles = rolesResult.rows.map(row => row.name);
+        
+        return user;
+    } catch (error) {
+        logger.error('Error fetching user by ID with roles', { error, userId: id });
+        throw error;
+    }
 }
 
 /**
- * Get user by email
+ * Get user by email with roles
  */
 export async function getUserByEmail(email: string): Promise<User | null> {
-    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-    return result.rows[0] || null;
+    try {
+        // First get the user
+        const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (userResult.rowCount === 0) {
+            return null;
+        }
+        
+        const user = userResult.rows[0];
+        
+        // Then get user roles
+        const rolesResult = await db.query(
+            `SELECT r.name 
+            FROM roles r 
+            INNER JOIN user_roles ur ON r.id = ur.role_id 
+            WHERE ur.user_id = $1`, 
+            [user.id]
+        );
+        
+        // Add roles to user object
+        user.roles = rolesResult.rows.map(row => row.name);
+        
+        return user;
+    } catch (error) {
+        logger.error('Error fetching user by email with roles', { error, email });
+        throw error;
+    }
 }
 
 /**
@@ -127,39 +175,81 @@ export async function deleteUser(id: string): Promise<boolean> {
 }
 
 /**
- * Get users with optional filtering
+ * Get users with optional filtering and include roles
  */
 export async function getUsers(
     filters: { organization_id?: string; status?: string; email?: string } = {},
     limit = 100,
     offset = 0
 ): Promise<User[]> {
-    let query = 'SELECT * FROM users WHERE 1=1';
-    const values: any[] = [];
-    let paramIndex = 1;
+    try {
+        let query = 'SELECT * FROM users WHERE 1=1';
+        const values: any[] = [];
+        let paramIndex = 1;
 
-    // Add filters
-    if (filters.organization_id) {
-        query += ` AND organization_id = $${paramIndex++}`;
-        values.push(filters.organization_id);
+        // Add filters
+        if (filters.organization_id) {
+            query += ` AND organization_id = $${paramIndex++}`;
+            values.push(filters.organization_id);
+        }
+
+        if (filters.status) {
+            query += ` AND status = $${paramIndex++}`;
+            values.push(filters.status);
+        }
+
+        if (filters.email) {
+            query += ` AND email = $${paramIndex++}`;
+            values.push(filters.email);
+        }
+
+        // Add pagination
+        query += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+        values.push(limit, offset);
+
+        const result = await db.query(query, values);
+        
+        // Get roles for all users
+        const users = result.rows;
+        
+        // If no users, return empty array
+        if (users.length === 0) {
+            return [];
+        }
+        
+        // Get all user IDs
+        const userIds = users.map(user => user.id);
+        
+        // Query for all roles for these users in one query
+        const rolesQuery = `
+            SELECT ur.user_id, r.name 
+            FROM roles r 
+            INNER JOIN user_roles ur ON r.id = ur.role_id 
+            WHERE ur.user_id = ANY($1::uuid[])
+        `;
+        
+        const rolesResult = await db.query(rolesQuery, [userIds]);
+        
+        // Create a map of user ID to roles
+        const userRolesMap = new Map();
+        
+        rolesResult.rows.forEach(row => {
+            if (!userRolesMap.has(row.user_id)) {
+                userRolesMap.set(row.user_id, []);
+            }
+            userRolesMap.get(row.user_id).push(row.name);
+        });
+        
+        // Add roles to each user
+        users.forEach(user => {
+            user.roles = userRolesMap.get(user.id) || [];
+        });
+        
+        return users;
+    } catch (error) {
+        logger.error('Error fetching users with roles', { error, filters });
+        throw error;
     }
-
-    if (filters.status) {
-        query += ` AND status = $${paramIndex++}`;
-        values.push(filters.status);
-    }
-
-    if (filters.email) {
-        query += ` AND email = $${paramIndex++}`;
-        values.push(filters.email);
-    }
-
-    // Add pagination
-    query += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
-    values.push(limit, offset);
-
-    const result = await db.query(query, values);
-    return result.rows;
 }
 
 /**

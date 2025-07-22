@@ -346,6 +346,26 @@ export class RoleService {
         }
     }
 
+    // Remove role from user by name
+    async removeRoleFromUserByName(userId: string, roleName: string, organizationId?: string): Promise<boolean> {
+        logger.info('Removing role from user by name', {
+            userId,
+            roleName,
+            organizationId
+        });
+
+        try {
+            return await roleRepository.removeRoleFromUserByName(userId, roleName, organizationId);
+        } catch (error) {
+            logger.error('Failed to remove role from user by name', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                userId,
+                roleName
+            });
+            throw error;
+        }
+    }
+
     // Get user's roles
     async getUserRoles(userId: string, organizationId?: string): Promise<{ role: Role; userRole: UserRole }[]> {
         logger.debug('Fetching user roles', { userId, organizationId });

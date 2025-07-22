@@ -279,6 +279,27 @@ export async function removeRoleFromUser(
     return result.rowCount ? result.rowCount > 0 : false;
 }
 
+// Remove role from user by role name
+export async function removeRoleFromUserByName(
+    userId: string,
+    roleName: string,
+    organizationId?: string
+): Promise<boolean> {
+    try {
+        // Get the role ID first
+        const role = await getRoleByName(roleName);
+        if (!role) {
+            return false;
+        }
+
+        // Then remove the role using the existing function
+        return await removeRoleFromUser(userId, role.id, organizationId);
+    } catch (error) {
+        console.error('Error removing role by name:', error);
+        return false;
+    }
+}
+
 // Get user's roles
 export async function getUserRoles(
     userId: string,

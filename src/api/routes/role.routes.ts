@@ -19,6 +19,7 @@ import {
     AssignRoleToUserValidator,
     AssignRoleToUserByNameValidator,
     RemoveRoleFromUserValidator,
+    RemoveRoleFromUserByNameValidator,
     GetUserRolesValidator,
     AssignPermissionToRoleValidator,
     RemovePermissionFromRoleValidator,
@@ -148,6 +149,14 @@ router.post(
     authorize(Permission.MANAGE_ROLES),
     validateRequest(AssignRoleToUserByNameValidator),
     roleController.assignRoleToUserByName
+);
+
+router.post(
+    '/user/:userId/remove-role',
+    authenticate,
+    authorize(Permission.MANAGE_ROLES),
+    validateRequest(RemoveRoleFromUserByNameValidator),
+    roleController.removeRoleFromUserByName
 );
 
 router.delete(

@@ -268,6 +268,24 @@ export const roleController = {
         }
     },
 
+    // Remove role from user by name
+    async removeRoleFromUserByName(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { userId } = req.params;
+            const { roleName, organizationId } = req.body;
+
+            const removed = await roleService.removeRoleFromUserByName(userId, roleName, organizationId);
+
+            if (!removed) {
+                return next(new AppError('Role assignment not found', 404, 'NOT_FOUND'));
+            }
+
+            return res.status(204).end();
+        } catch (error) {
+            next(error);
+        }
+    },
+
     /**
      * Role Permission Controllers
      */

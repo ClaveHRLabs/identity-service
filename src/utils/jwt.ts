@@ -132,7 +132,7 @@ export async function generateAccessToken(user: User, additionalData?: Record<st
     }
 
     return jwt.sign(payload, Config.JWT_SECRET, {
-        expiresIn: Config.JWT_EXPIRATION
+        expiresIn: Config.JWT_EXPIRATION as unknown as number
     });
 }
 
@@ -155,7 +155,7 @@ export async function generateRefreshToken(user: User): Promise<string> {
     };
 
     return jwt.sign(payload, Config.JWT_REFRESH_SECRET, {
-        expiresIn: Config.JWT_REFRESH_EXPIRATION
+        expiresIn: Config.JWT_REFRESH_EXPIRATION as unknown as number
     });
 }
 

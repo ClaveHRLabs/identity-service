@@ -93,6 +93,16 @@ export const RemoveRoleFromUserValidator = z.object({
     })
 });
 
+export const RemoveRoleFromUserByNameValidator = z.object({
+    params: z.object({
+        userId: z.string().uuid('Invalid user ID'),
+    }),
+    body: z.object({
+        roleName: z.string().min(1, 'Role name is required'),
+        organizationId: z.string().uuid('Invalid organization ID').optional()
+    })
+});
+
 export const GetUserRolesValidator = z.object({
     params: z.object({
         userId: z.string().uuid('Invalid user ID')
