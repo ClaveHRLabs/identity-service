@@ -41,7 +41,6 @@ export const createUserRoutes = (userController: UserController) => {
         '/:id',
         serviceAuth, // Add service auth middleware
         authenticate,
-        authorize(Permission.VIEW_ALL_USERS),
         validateRequest(GetUserValidator),
         userController.getUser.bind(userController)
     );

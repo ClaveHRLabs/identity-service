@@ -67,7 +67,6 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
     router.get(
         '/:id',
         authOrSetupCode,
-        authorize(Permission.VIEW_ALL_USERS),
         validateRequest(GetOrganizationProfileValidator),
         organizationController.getOrganization.bind(organizationController)
     );
