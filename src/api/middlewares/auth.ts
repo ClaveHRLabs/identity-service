@@ -10,6 +10,7 @@ declare global {
         interface Request {
             user?: any;
             userId?: string;
+            isServiceRequest?: boolean; // Added for service auth check
         }
     }
 }
@@ -19,6 +20,11 @@ declare global {
  */
 export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+        // Skip token authentication if already authenticated by service auth
+        if (req.isServiceRequest === true) {
+            return next();
+        }
+
         const authHeader = req.headers.authorization;
 
         if (!authHeader) {

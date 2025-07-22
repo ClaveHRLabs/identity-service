@@ -3,6 +3,7 @@ import { UserController } from '../controllers/user.controller';
 import { validateRequest } from '../middlewares/validate-request';
 import { authenticate, loadUser } from '../middlewares/authenticate';
 import { authorize } from '../middlewares/authorize';
+import { serviceAuth } from '../middlewares/service-auth'; // Import the service auth middleware
 import {
     CreateUserValidator,
     UpdateUserValidator,
@@ -16,9 +17,10 @@ import { Permission } from '../../models/enums/roles.enum';
 export const createUserRoutes = (userController: UserController) => {
     const router = Router();
 
-    // Create a new user - requires manage_users permission
+    // Create a new user - requires manage_users permission or valid service key
     router.post(
         '/',
+        serviceAuth, // Add service auth middleware first
         authenticate,
         authorize(Permission.MANAGE_USERS),
         validateRequest(CreateUserValidator),
@@ -37,6 +39,7 @@ export const createUserRoutes = (userController: UserController) => {
     // Get user by ID - requires view_all_users permission
     router.get(
         '/:id',
+        serviceAuth, // Add service auth middleware
         authenticate,
         authorize(Permission.VIEW_ALL_USERS),
         validateRequest(GetUserValidator),
@@ -46,6 +49,7 @@ export const createUserRoutes = (userController: UserController) => {
     // Update user - requires manage_users permission
     router.put(
         '/:id',
+        serviceAuth, // Add service auth middleware
         authenticate,
         authorize(Permission.MANAGE_USERS),
         validateRequest(UpdateUserValidator),
@@ -55,6 +59,7 @@ export const createUserRoutes = (userController: UserController) => {
     // Delete user - requires manage_users permission
     router.delete(
         '/:id',
+        serviceAuth, // Add service auth middleware
         authenticate,
         authorize(Permission.MANAGE_USERS),
         validateRequest(DeleteUserValidator),
@@ -64,6 +69,7 @@ export const createUserRoutes = (userController: UserController) => {
     // List users with optional filtering - requires view_all_users permission
     router.get(
         '/',
+        serviceAuth, // Add service auth middleware
         authenticate,
         authorize(Permission.VIEW_ALL_USERS),
         validateRequest(ListUsersValidator),

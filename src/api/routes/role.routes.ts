@@ -4,6 +4,7 @@ import { validateRequest } from '../middlewares/validate-request';
 import { authenticate } from '../middlewares/authenticate';
 import { authorize } from '../middlewares/authorize';
 import { validateRoleAssignment, getAssignableRoles } from '../middlewares/validate-role-assignment';
+import { serviceAuth } from '../middlewares/service-auth'; // Import service auth middleware
 
 import {
     CreateRoleValidator,
@@ -35,6 +36,7 @@ const router = Router();
  */
 router.get(
     '/',
+    serviceAuth, // Add service auth
     authenticate,
     authorize('view_all_users'),
     validateRequest(ListRolesValidator),
@@ -43,6 +45,7 @@ router.get(
 
 router.get(
     '/assignable',
+    serviceAuth, // Add service auth
     authenticate,
     getAssignableRoles,
     roleController.getAssignableRoles
@@ -50,6 +53,7 @@ router.get(
 
 router.get(
     '/:id',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.VIEW_ALL_USERS),
     validateRequest(GetRoleValidator),
@@ -58,6 +62,7 @@ router.get(
 
 router.post(
     '/',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(CreateRoleValidator),
@@ -66,6 +71,7 @@ router.post(
 
 router.put(
     '/:id',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(UpdateRoleValidator),
@@ -74,6 +80,7 @@ router.put(
 
 router.delete(
     '/:id',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(DeleteRoleValidator),
@@ -85,6 +92,7 @@ router.delete(
  */
 router.get(
     '/permissions',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(ListPermissionsValidator),
@@ -93,6 +101,7 @@ router.get(
 
 router.get(
     '/permissions/:id',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(GetPermissionValidator),
@@ -101,6 +110,7 @@ router.get(
 
 router.post(
     '/permissions',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_SYSTEM),
     validateRequest(CreatePermissionValidator),
@@ -109,6 +119,7 @@ router.post(
 
 router.put(
     '/permissions/:id',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_SYSTEM),
     validateRequest(UpdatePermissionValidator),
@@ -117,6 +128,7 @@ router.put(
 
 router.delete(
     '/permissions/:id',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_SYSTEM),
     validateRequest(DeletePermissionValidator),
@@ -128,6 +140,7 @@ router.delete(
  */
 router.get(
     '/user/:userId',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.VIEW_ALL_USERS),
     validateRequest(GetUserRolesValidator),
@@ -136,6 +149,7 @@ router.get(
 
 router.post(
     '/assign',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(AssignRoleToUserValidator),
@@ -145,6 +159,7 @@ router.post(
 
 router.post(
     '/assign-by-name',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(AssignRoleToUserByNameValidator),
@@ -153,6 +168,7 @@ router.post(
 
 router.post(
     '/user/:userId/remove-role',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(RemoveRoleFromUserByNameValidator),
@@ -161,6 +177,7 @@ router.post(
 
 router.delete(
     '/user/:userId/role/:roleId',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(RemoveRoleFromUserValidator),
@@ -173,6 +190,7 @@ router.delete(
  */
 router.get(
     '/:roleId/permissions',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.VIEW_ALL_USERS),
     validateRequest(GetRolePermissionsValidator),
@@ -181,6 +199,7 @@ router.get(
 
 router.post(
     '/permissions/assign',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_SYSTEM),
     validateRequest(AssignPermissionToRoleValidator),
@@ -189,6 +208,7 @@ router.post(
 
 router.delete(
     '/:roleId/permissions/:permissionId',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.MANAGE_SYSTEM),
     validateRequest(RemovePermissionFromRoleValidator),
@@ -200,6 +220,7 @@ router.delete(
  */
 router.get(
     '/check-permission/:userId/:permissionName',
+    serviceAuth, // Add service auth
     authenticate,
     authorize(Permission.VIEW_ALL_USERS),
     validateRequest(CheckUserPermissionValidator),

@@ -425,3 +425,31 @@ export async function userHasPermission(
     const result = await db.query(query, values);
     return result.rowCount ? result.rowCount > 0 : false;
 } 
+
+// Get roles by names
+export async function getRolesByNames(roleNames: string[]): Promise<Role[]> {
+    if (!roleNames.length) return [];
+    
+    const placeholders = roleNames.map((_, i) => `$${i + 1}`).join(',');
+    const query = `SELECT * FROM roles WHERE name IN (${placeholders})`;
+    
+    const result = await db.query(query, roleNames);
+    return result.rows;
+}
+
+// Get permissions for multiple roles
+export async function getPermissionsForRoles(roleIds: string[]): Promise<Permission[]> {
+    if (!roleIds.length) return [];
+    
+    const placeholders = roleIds.map((_, i) => `$${i + 1}`).join(',');
+    const query = `
+        SELECT DISTINCT p.* 
+        FROM permissions p
+        JOIN role_permissions rp ON p.id = rp.permission_id
+        WHERE rp.role_id IN (${placeholders})
+        ORDER BY p.name ASC
+    `;
+    
+    const result = await db.query(query, roleIds);
+    return result.rows;
+} 

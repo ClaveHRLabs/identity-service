@@ -35,6 +35,9 @@ const envSchema = z.object({
 
     // Admin Configuration
     ADMIN_KEY: z.string().min(1, 'ADMIN_KEY is required'),
+    
+    // Service-to-service Authentication
+    SERVICE_API_KEY: z.string().optional().default(''),
 
     // OAuth Configuration
     GOOGLE_CLIENT_ID: z.string().optional(),
@@ -90,6 +93,9 @@ export class Config {
 
     // Admin Configuration
     public static readonly ADMIN_KEY: string = process.env.ADMIN_KEY || '';
+    
+    // Service-to-service Authentication
+    public static readonly SERVICE_API_KEY: string = process.env.SERVICE_API_KEY || '';
 
     // OAuth Configuration
     public static readonly GOOGLE_CLIENT_ID: string = process.env.GOOGLE_CLIENT_ID || '';

@@ -7,6 +7,8 @@ declare global {
             setupCode?: string;
             userId?: string;
             organizationId?: string;
+            isServiceRequest?: boolean;
+            permissions?: string[];
             user?: {
                 id: string;
                 email: string;
