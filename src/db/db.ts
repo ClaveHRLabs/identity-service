@@ -9,7 +9,7 @@ const pool = new Pool({
     database: Config.DB_NAME,
     user: Config.DB_USER,
     password: Config.DB_PASS,
-    max: 4, // Maximum connection pool size
+    max: 5, // Maximum connection pool size
     idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
     connectionTimeoutMillis: 2000, // Return an error if connection takes longer than 2 seconds
 });
