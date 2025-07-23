@@ -1,10 +1,10 @@
-import dotenv from 'dotenv';
-import path from 'path';
 import { z } from 'zod';
+import 'dotenv/config';
+import { logger } from '../utils/logger';
 
-// Load .env file
-const envPath = path.resolve(process.cwd(), '.env');
-dotenv.config({ path: envPath });
+// Import only what's needed from dotenv
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 // Define environment schema with Zod
 const envSchema = z.object({
@@ -108,18 +108,4 @@ export class Config {
     // Error Handling
     public static readonly SHOW_ERROR_STACK: boolean = process.env.SHOW_ERROR_STACK === 'true';
     public static readonly SHOW_ERROR_DETAILS: boolean = process.env.SHOW_ERROR_DETAILS === 'true';
-
-    // Required value getter with validation
-    public static getRequired(key: string): string {
-        const value = process.env[key];
-        if (!value) {
-            throw new Error(`Missing required environment variable: ${key}`);
-        }
-        return value;
-    }
-
-    // Optional value getter with default
-    public static get(key: string, defaultValue?: string): string {
-        return process.env[key] || defaultValue || '';
-    }
 } 

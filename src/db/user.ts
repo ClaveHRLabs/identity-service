@@ -60,6 +60,38 @@ export async function getUserById(id: string): Promise<User | null> {
 }
 
 /**
+ * Get employee ID by user ID from employees table
+ * @param userId The user ID
+ * @param organizationId Optional organization ID for filtering
+ * @returns The employee ID or undefined if not found
+ */
+export async function getEmployeeIdByUserId(userId: string, organizationId?: string): Promise<string | undefined> {
+    try {
+        // Query to get the employee ID
+        const query = organizationId 
+            ? 'SELECT id FROM employees WHERE user_id = $1 AND organization_id = $2'
+            : 'SELECT id FROM employees WHERE user_id = $1';
+            
+        const params = organizationId ? [userId, organizationId] : [userId];
+        
+        const result = await db.query(query, params);
+        
+        if (result.rows.length > 0) {
+            return result.rows[0].id;
+        }
+        
+        return undefined;
+    } catch (error) {
+        logger.error('Error getting employee ID by user ID', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            userId,
+            organizationId
+        });
+        return undefined;
+    }
+}
+
+/**
  * Get user by email with roles
  */
 export async function getUserByEmail(email: string): Promise<User | null> {

@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { Config } from '../config/config';
 import { User } from '../models/schemas/user';
 import * as roleRepository from '../db/role';
+import * as userRepository from '../db/user';
 import { logger } from '../utils/logger';
 
 // Types
@@ -20,6 +21,7 @@ export interface JwtPayload {
     roles?: string[];
     status?: string;
     organizationId?: string;
+    employeeId?: string; // Add employeeId field to JwtPayload
 
     // Token type
     type: 'access' | 'refresh';
@@ -80,7 +82,7 @@ async function getUserPrimaryRole(userId: string): Promise<string> {
 }
 
 /**
- * Get all user role names
+ * Get all role names assigned to a user
  * @param userId The user ID
  * @returns Array of role names
  */
@@ -89,7 +91,7 @@ async function getUserRoleNames(userId: string): Promise<string[]> {
         const userRoles = await roleRepository.getUserRoles(userId);
         return userRoles.map(ur => ur.role.name);
     } catch (error) {
-        logger.error('Error getting user roles', {
+        logger.error('Error getting user role names', {
             error: error instanceof Error ? error.message : 'Unknown error',
             userId
         });
@@ -104,9 +106,10 @@ async function getUserRoleNames(userId: string): Promise<string[]> {
  */
 export async function generateAccessToken(user: User, additionalData?: Record<string, any>): Promise<string> {
     // Get user's primary role and all roles
-    const [primaryRole, roles] = await Promise.all([
+    const [primaryRole, roles, employeeId] = await Promise.all([
         getUserPrimaryRole(user.id),
-        getUserRoleNames(user.id)
+        getUserRoleNames(user.id),
+        userRepository.getEmployeeIdByUserId(user.id, user.organization_id)
     ]);
 
     const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
@@ -122,6 +125,7 @@ export async function generateAccessToken(user: User, additionalData?: Record<st
         roles: roles,
         status: user.status || 'active',
         organizationId: user.organization_id,
+        employeeId: employeeId, // Add employeeId to the token
         type: 'access',
         metadata: user.metadata
     };
@@ -141,7 +145,10 @@ export async function generateAccessToken(user: User, additionalData?: Record<st
  */
 export async function generateRefreshToken(user: User): Promise<string> {
     // Get user's primary role
-    const primaryRole = await getUserPrimaryRole(user.id);
+    const [primaryRole, employeeId] = await Promise.all([
+        getUserPrimaryRole(user.id),
+        userRepository.getEmployeeIdByUserId(user.id, user.organization_id)
+    ]);
 
     const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
         sub: user.id,
@@ -151,6 +158,7 @@ export async function generateRefreshToken(user: User): Promise<string> {
         lastName: user.last_name || undefined,
         role: primaryRole,
         organizationId: user.organization_id,
+        employeeId: employeeId, // Add employeeId to the token
         type: 'refresh'
     };
 
@@ -180,7 +188,7 @@ export function verifyAccessToken(token: string): Promise<JwtPayload> {
 }
 
 /**
- * Verify a refresh token JWT
+ * Verify a refresh token
  */
 export function verifyRefreshToken(token: string): Promise<JwtPayload> {
     return new Promise((resolve, reject) => {
