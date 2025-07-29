@@ -47,6 +47,9 @@ const envSchema = z.object({
     LINKEDIN_CLIENT_ID: z.string().optional(),
     LINKEDIN_CLIENT_SECRET: z.string().optional(),
 
+    // Service URLs
+    NOTIFICATION_SERVICE_URL: z.string().url().default('http://localhost:5010'),
+
     // Error Handling
     SHOW_ERROR_STACK: z.string().transform(val => val === 'true').default('false'),
     SHOW_ERROR_DETAILS: z.string().transform(val => val === 'true').default('false')
@@ -104,6 +107,9 @@ export class Config {
     public static readonly MICROSOFT_CLIENT_SECRET: string = process.env.MICROSOFT_CLIENT_SECRET || '';
     public static readonly LINKEDIN_CLIENT_ID: string = process.env.LINKEDIN_CLIENT_ID || '';
     public static readonly LINKEDIN_CLIENT_SECRET: string = process.env.LINKEDIN_CLIENT_SECRET || '';
+
+    // Service URLs
+    public static readonly NOTIFICATION_SERVICE_URL: string = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5010';
 
     // Error Handling
     public static readonly SHOW_ERROR_STACK: boolean = process.env.SHOW_ERROR_STACK === 'true';

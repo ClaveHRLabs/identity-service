@@ -273,3 +273,20 @@ x-setup-code: {{setupCode}}
 GET {{baseUrl}}/api/organizations/cca31b6a-717c-4a1a-88c1-ef2b9a3c4c6c
 Accept: application/json
 Authorization: Bearer {{accessToken}}
+
+### Test magic link login with email notification
+POST http://localhost:3001/api/auth/magic-link
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "redirectUri": "http://localhost:3000/dashboard"
+}
+
+### Verify magic link (requires token from email)
+POST http://localhost:3001/api/auth/verify-magic-link
+Content-Type: application/json
+
+{
+  "token": "TOKEN_FROM_EMAIL"
+}

@@ -1,49 +1,53 @@
 import { logger } from '../utils/logger';
 import { Config } from '../config/config';
+import { NotificationClient } from '../utils/notification-client';
+
 // Note: In a real application, you would use a proper email service like
 // nodemailer, SendGrid, AWS SES, etc. This is a simplified version for development.
 
 export class EmailService {
+    private notificationClient: NotificationClient;
+
+    constructor() {
+        this.notificationClient = new NotificationClient();
+    }
+
     /**
      * Send a magic link email for authentication
      */
-    async sendMagicLinkEmail(email: string, verificationUrl: string): Promise<void> {
+    async sendMagicLinkEmail(
+        email: string, 
+        verificationUrl: string, 
+        name: string = 'User',
+        organizationId: string = '',
+        organizationName: string = 'Clave HR'
+    ): Promise<void> {
         // In development mode, just log the magic link URL
         if (Config.IS_DEVELOPMENT) {
             logger.info(`[DEV MODE] Magic link for ${email}: ${verificationUrl}`);
-            return;
+            // Even in development, also try to send the actual notification
         }
 
         try {
-            // In a real application, here you would use an email service
-            // to send the actual email with the magic link
-            logger.info(`Sent magic link email to ${email}`);
-
-            // This is where you would implement actual email sending logic
-            // Example with nodemailer (commented out):
-            /*
-            const transporter = nodemailer.createTransport({
-                host: Config.EMAIL_HOST,
-                port: Config.EMAIL_PORT,
-                secure: Config.EMAIL_SECURE,
-                auth: {
-                    user: Config.EMAIL_USER,
-                    pass: Config.EMAIL_PASSWORD
-                }
-            });
-
-            await transporter.sendMail({
-                from: Config.EMAIL_FROM,
-                to: email,
-                subject: "Your ClaveHR Login Link",
-                text: `Click the link to sign in: ${verificationUrl}`,
-                html: `<p>Click the link to sign in:</p>
-                       <p><a href="${verificationUrl}">${verificationUrl}</a></p>
-                       <p>This link will expire in 30 minutes.</p>`
-            });
-            */
+            // Send the login link notification using the notification service
+            await this.notificationClient.sendLoginLinkNotification(
+                email,
+                name,
+                verificationUrl,
+                organizationId,
+                organizationName
+            );
+            
+            logger.info(`Sent magic link email to ${email} using notification service`);
         } catch (error) {
-            logger.error('Error sending magic link email', { error, email });
+            logger.error('Error sending magic link email through notification service', { error, email });
+            
+            // Fallback to logging for development if notification service fails
+            if (Config.IS_DEVELOPMENT) {
+                logger.info(`[DEV FALLBACK] Magic link for ${email}: ${verificationUrl}`);
+                return;
+            }
+            
             throw new Error('Failed to send magic link email');
         }
     }

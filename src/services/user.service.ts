@@ -256,4 +256,20 @@ export class UserService {
         logger.debug('Updating last login time', { id });
         return userRepository.updateLastLogin(id);
     }
+
+    /**
+     * Get organization by ID
+     */
+    async getOrganizationById(id: string): Promise<any | null> {
+        logger.debug('Fetching organization by ID', { id });
+        try {
+            return await organizationRepository.getOrganizationProfileById(id);
+        } catch (error) {
+            logger.error('Error fetching organization by ID', { 
+                error: error instanceof Error ? error.message : 'Unknown error',
+                id 
+            });
+            return null;
+        }
+    }
 } 

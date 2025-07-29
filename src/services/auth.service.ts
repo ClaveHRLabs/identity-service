@@ -487,6 +487,9 @@ export class AuthService {
 
             // Get user or create one if it doesn't exist
             let user = await this.userService.getUserByEmail(email);
+            let userName = 'User';
+            let organizationId = 'b7cb3474-e7dc-49a6-bf07-e3aa4a6932c0';
+            let organizationName = 'Clave HR';
 
             if (!user) {
                 // Create a new user with just email
@@ -501,14 +504,34 @@ export class AuthService {
                     provider_type: 'email',
                     email
                 });
+            } else {
+                // Get user's name if available
+                userName = user.first_name ? 
+                    (user.first_name + (user.last_name ? ' ' + user.last_name : '')) : 
+                    email.split('@')[0]; // Use part of email as name if no name available
+                
+                // Get user's organization
+                if (user.id) {
+                    organizationId = await this.getUserOrganizationId(user.id);
+
+                    // Get organization name
+                    const organization = await this.userService.getOrganizationById(organizationId);
+                    organizationName = organization.name;
+                }
             }
 
             // Generate magic link URL 
-            const baseUrl = Config.FRONTEND_URL || 'https://app.clavehr.com';
-            const verificationUrl = `${baseUrl}/verify-email?token=${magicLink.token}`;
 
-            // Send magic link email
-            await this.emailService.sendMagicLinkEmail(email, verificationUrl);
+            const verificationUrl = `${Config.FRONTEND_URL}/verify-email?token=${magicLink.token}`;
+
+            // Send magic link email with user's name and organization info
+            await this.emailService.sendMagicLinkEmail(
+                email, 
+                verificationUrl, 
+                userName,
+                organizationId,
+                organizationName
+            );
 
             logger.info('Magic link sent successfully', { email });
         } catch (error) {
@@ -702,5 +725,23 @@ export class AuthService {
             logger.error('Error revoking all user tokens', { error, userId });
             throw new AppError('Failed to revoke tokens', 500, 'AUTH_ERROR');
         }
+    }
+
+    /**
+     * Get the organization ID for a user
+     * If user has no organization, return a default one
+     */
+    private async getUserOrganizationId(userId: string): Promise<string> {
+        try {
+            const user = await this.userService.getUserById(userId);
+            if (user && user.organization_id) {
+                return user.organization_id;
+            }
+        } catch (error) {
+            logger.warn('Failed to get user organization ID', { userId, error });
+        }
+        
+        // Default organization ID if none found
+        return 'b7cb3474-e7dc-49a6-bf07-e3aa4a6932c0';
     }
 } 
