@@ -1,0 +1,26 @@
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies - use ci if package-lock.json exists, otherwise use install
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+# Copy application code (will be overridden by volume mount in dev)
+COPY . .
+
+# Expose the port
+ENV PORT=5001
+EXPOSE 5001
+
+# Make sure node_modules is not overwritten by host volume
+RUN mkdir -p /node_modules_container && \
+    cp -R node_modules/. /node_modules_container/ && \
+    rm -rf node_modules && \
+    ln -s /node_modules_container node_modules
+
+# Command for development mode with hot-reload
+CMD ["npm", "run", "dev"]
