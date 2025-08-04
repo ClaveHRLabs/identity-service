@@ -1,5 +1,5 @@
 import { app, dbPool } from './dependencies';
-import { logger } from './src/utils/logger';
+import { logger } from './utils/logger';
 
 // Start the server
 const PORT = process.env.PORT || 5001;
