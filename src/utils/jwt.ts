@@ -21,8 +21,23 @@ export interface JwtPayload {
     roles?: string[];
     status?: string;
     organizationId?: string;
-    employeeId?: string; // Add employeeId field to JwtPayload
 
+    // Employee claims
+    employeeId?: string; // Add employeeId field to JwtPayload
+    managerId?: string;
+    department?: string;
+    title?: string;
+    imageUrl?: string;
+    isActive?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+    employmentStatus?: string;
+    internalEmployeeId?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    zip?: string;
+    
     // Token type
     type: 'access' | 'refresh';
 
@@ -106,11 +121,13 @@ async function getUserRoleNames(userId: string): Promise<string[]> {
  */
 export async function generateAccessToken(user: User, additionalData?: Record<string, any>): Promise<string> {
     // Get user's primary role and all roles
-    const [primaryRole, roles, employeeId] = await Promise.all([
+    const [primaryRole, roles, employee] = await Promise.all([
         getUserPrimaryRole(user.id),
         getUserRoleNames(user.id),
-        userRepository.getEmployeeIdByUserId(user.id, user.organization_id)
+        userRepository.getEmployeeByUserId(user.id, user.organization_id)
     ]);
+
+    console.log(">>> employee", employee);
 
     const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
         // Use sub as the user ID (JWT standard)
@@ -125,10 +142,26 @@ export async function generateAccessToken(user: User, additionalData?: Record<st
         roles: roles,
         status: user.status || 'active',
         organizationId: user.organization_id,
-        employeeId: employeeId, // Add employeeId to the token
+        employeeId: employee.id, // Add employeeId to the token
+        managerId: employee.managerId,
+        department: employee.department,
+        title: employee.title,
+        imageUrl: employee.avatar_url,
+        isActive: employee.status !== 'inactive' && employee.status !== 'terminated',
+        createdAt: employee.created_at,
+        updatedAt: employee.updated_at,
+        employmentStatus: employee.status,
+        internalEmployeeId: employee.employee_id_number,
+        city: employee.city,
+        state: employee.state,
+        country: employee.country,
+        zip: employee.zip,
+
         type: 'access',
         metadata: user.metadata
     };
+
+    logger.info(">>> payload", payload);
 
     // Add additional data if provided
     if (additionalData) {
@@ -145,9 +178,9 @@ export async function generateAccessToken(user: User, additionalData?: Record<st
  */
 export async function generateRefreshToken(user: User): Promise<string> {
     // Get user's primary role
-    const [primaryRole, employeeId] = await Promise.all([
+    const [primaryRole, employee] = await Promise.all([
         getUserPrimaryRole(user.id),
-        userRepository.getEmployeeIdByUserId(user.id, user.organization_id)
+        userRepository.getEmployeeByUserId(user.id, user.organization_id)
     ]);
 
     const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
@@ -158,7 +191,13 @@ export async function generateRefreshToken(user: User): Promise<string> {
         lastName: user.last_name || undefined,
         role: primaryRole,
         organizationId: user.organization_id,
-        employeeId: employeeId, // Add employeeId to the token
+        employeeId: employee.id, // Add employeeId to the token
+        managerId: employee.managerId,
+        department: employee.department,
+        title: employee.title,
+        imageUrl: employee.avatar_url,
+        isActive: employee.status !== 'inactive' && employee.status !== 'terminated',
+        createdAt: employee.created_at,
         type: 'refresh'
     };
 

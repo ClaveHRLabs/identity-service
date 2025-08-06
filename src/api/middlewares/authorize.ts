@@ -15,7 +15,7 @@ export const authorize = (requiredPermission: string) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
             // Skip permission check if request is authenticated via setup code
-            if (req.setupCode) {
+            if ((req as any).setupCode) {
                 logger.debug('Bypassing permission check due to valid setup code', {
                     requiredPermission,
                     path: req.path
@@ -24,9 +24,9 @@ export const authorize = (requiredPermission: string) => {
             }
 
             // If this is a service request that has set permissions, check those directly
-            if (req.isServiceRequest === true && req.permissions) {
+            if (req.isServiceRequest === true && (req as any).permissions) {
                 // Check if the required permission exists in the permissions array
-                if (req.permissions.includes(requiredPermission)) {
+                if ((req as any).permissions.includes(requiredPermission)) {
                     logger.debug('Permission granted via service auth', {
                         requiredPermission,
                         path: req.path
@@ -36,7 +36,7 @@ export const authorize = (requiredPermission: string) => {
 
                 logger.warn('Service request permission denied', {
                     requiredPermission,
-                    userPermissions: req.permissions,
+                    userPermissions: (req as any).permissions,
                     path: req.path
                 });
                 

@@ -86,7 +86,7 @@ export const serviceAuth = async (req: Request, res: Response, next: NextFunctio
                                         userRoles.map((role: Role) => role.id)
                                     );
                                     
-                                    req.permissions = userPermissions.map((p: Permission) => p.name);
+                                    (req as any).permissions = userPermissions.map((p: Permission) => p.name);
                                 }
                             } catch (e) {
                                 logger.warn('Error deriving permissions from roles', { 
@@ -114,7 +114,7 @@ export const serviceAuth = async (req: Request, res: Response, next: NextFunctio
         // Set organization context if provided
         const organizationId = req.headers[HEADERS.ORGANIZATION_ID];
         if (organizationId && typeof organizationId === 'string') {
-            req.organizationId = organizationId;
+            (req as any).organizationId = organizationId;
             
             if (!req.body.organization_id) {
                 req.body.organization_id = organizationId;

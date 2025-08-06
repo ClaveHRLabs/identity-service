@@ -23,7 +23,7 @@ export class OrganizationController {
             // Pass setup code to service if available
             const organization = await this.organizationService.createOrganizationProfile(
                 organizationData,
-                req.setupCode
+                (req as any).setupCode
             );
 
             res.status(201).json({
@@ -95,7 +95,7 @@ export class OrganizationController {
     async getOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;
-            const organization = await this.organizationService.getOrganizationProfile(id, req.setupCode);
+            const organization = await this.organizationService.getOrganizationProfile(id, (req as any).setupCode);
 
             if (!organization) {
                 res.status(404).json({
@@ -126,7 +126,7 @@ export class OrganizationController {
             const organization = await this.organizationService.updateOrganizationProfile(
                 id,
                 updateData,
-                req.setupCode
+                (req as any).setupCode
             );
 
             if (!organization) {
@@ -165,7 +165,7 @@ export class OrganizationController {
             const organization = await this.organizationService.updateOrganizationProfile(
                 id,
                 updateData,
-                req.setupCode
+                (req as any).setupCode
             );
 
             if (!organization) {
@@ -194,7 +194,7 @@ export class OrganizationController {
             const { id } = req.params;
 
             // Verify organization exists
-            const organization = await this.organizationService.getOrganizationProfile(id, req.setupCode);
+            const organization = await this.organizationService.getOrganizationProfile(id, (req as any).setupCode);
 
             if (!organization) {
                 res.status(404).json({
@@ -222,7 +222,7 @@ export class OrganizationController {
                         setup_completed_at: new Date().toISOString()
                     }
                 },
-                req.setupCode
+                (req as any).setupCode
             );
 
             if (!updatedOrg) {
@@ -254,7 +254,7 @@ export class OrganizationController {
     async deleteOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;
-            const deleted = await this.organizationService.deleteOrganizationProfile(id, req.setupCode);
+            const deleted = await this.organizationService.deleteOrganizationProfile(id, (req as any).setupCode);
 
             if (!deleted) {
                 res.status(404).json({
@@ -289,7 +289,7 @@ export class OrganizationController {
                 filters,
                 Number(limit),
                 Number(offset),
-                req.setupCode
+                (req as any).setupCode
             );
 
             res.status(200).json({

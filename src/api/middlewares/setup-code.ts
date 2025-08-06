@@ -44,7 +44,7 @@ export const extractSetupCode = (req: Request, res: Response, next: NextFunction
 
     if (setupCode) {
         // Add the setup code to the request object for use in controllers
-        req.setupCode = setupCode;
+        (req as any).setupCode = setupCode;
         logger.debug('Extracted setup code from request header', { code: setupCode });
     }
 

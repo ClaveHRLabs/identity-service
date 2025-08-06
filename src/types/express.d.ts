@@ -3,6 +3,7 @@ import * as express from 'express';
 
 declare global {
     namespace Express {
+        // Extend Express Request interface
         interface Request {
             setupCode?: string;
             userId?: string;
@@ -16,6 +17,7 @@ declare global {
                 [key: string]: any;
             };
             assignableRoles?: string[];
+            // Removed duplicate setupCode declaration
         }
     }
 } 

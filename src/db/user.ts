@@ -65,19 +65,33 @@ export async function getUserById(id: string): Promise<User | null> {
  * @param organizationId Optional organization ID for filtering
  * @returns The employee ID or undefined if not found
  */
-export async function getEmployeeIdByUserId(userId: string, organizationId?: string): Promise<string | undefined> {
+export async function getEmployeeByUserId(userId: string, organizationId?: string): Promise<any> {
     try {
         // Query to get the employee ID
         const query = organizationId 
-            ? 'SELECT id FROM employees WHERE user_id = $1 AND organization_id = $2'
-            : 'SELECT id FROM employees WHERE user_id = $1';
+            ? 'SELECT * FROM employees_derived WHERE user_id = $1 AND organization_id = $2'
+            : 'SELECT * FROM employees_derived WHERE user_id = $1';
             
         const params = organizationId ? [userId, organizationId] : [userId];
         
         const result = await db.query(query, params);
         
         if (result.rows.length > 0) {
-            return result.rows[0].id;
+            return {
+                id: result.rows[0].id,
+                managerId: result.rows[0].manager_id,
+                department: result.rows[0].department,
+                firstName: result.rows[0].first_name,
+                lastName: result.rows[0].last_name,
+                title: result.rows[0].position,
+                internalEmployeeId: result.rows[0].employee_id_number,
+                status: result.rows[0].status,
+                email: result.rows[0].email,
+                city: result.rows[0].city,
+                state: result.rows[0].state,
+                country: result.rows[0].country,
+                zip: result.rows[0].zip
+            }
         }
         
         return undefined;
