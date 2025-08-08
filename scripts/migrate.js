@@ -1,99 +1,39 @@
-require("dotenv").config();
-const fs = require("fs");
-const path = require("path");
-const { Pool } = require("pg");
+require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+const { Pool } = require('pg');
 
-// Create PostgreSQL connection pool
+// Create PostgreSQL connection pool using environment variables
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT),
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
+  host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT || 5432),
+  database: process.env.DB_NAME || 'clavehr_identity',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASS || process.env.DB_PASSWORD || 'postgres',
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
 
-async function executeMigration(filePath) {
-  const sql = fs.readFileSync(filePath, "utf8");
-  console.log(`Executing migration: ${path.basename(filePath)}`);
+async function applySchema(schemaFilePath) {
+  console.log(`Applying consolidated schema: ${path.basename(schemaFilePath)}`);
+  const sql = fs.readFileSync(schemaFilePath, 'utf8');
+  await pool.query(sql);
+  console.log('✅ Schema applied successfully');
+}
+
+async function main() {
   try {
-    await pool.query(sql);
-    console.log(`✅ Migration successful: ${path.basename(filePath)}`);
-    return true;
+    const schemaPath = path.join(__dirname, '../schema/schema.sql');
+    if (!fs.existsSync(schemaPath)) {
+      console.error('❌ schema.sql not found. Generate it first via docker/init-all-db.sh or docker/build-schemas.js');
+      process.exit(1);
+    }
+    await applySchema(schemaPath);
   } catch (error) {
-    console.error(`❌ Migration failed: ${path.basename(filePath)}`);
-    console.error(error);
-    return false;
+    console.error('❌ Error applying schema:', error);
+    process.exit(1);
+  } finally {
+    await pool.end();
   }
 }
 
-async function runMigrations() {
-  console.log("Starting migrations...");
-
-  // Run init.sql first to set up extensions and functions
-  const initPath = path.join(__dirname, "../schema/init.sql");
-  try {
-    if (fs.existsSync(initPath)) {
-      const success = await executeMigration(initPath);
-      if (!success) {
-        console.error("Initialization failed. Stopping.");
-        process.exit(1);
-      }
-    } else {
-      console.warn("Warning: init.sql not found");
-    }
-  } catch (error) {
-    console.error("Error during initialization:", error);
-    process.exit(1);
-  }
-
-  // Read schema.sql next
-  const schemaPath = path.join(__dirname, "../schema/schema.sql");
-  try {
-    if (fs.existsSync(schemaPath)) {
-      const success = await executeMigration(schemaPath);
-      if (!success) {
-        console.error("Schema migration failed. Stopping.");
-        process.exit(1);
-      }
-    } else {
-      console.warn("Warning: schema.sql not found");
-    }
-  } catch (error) {
-    console.error("Error reading schema file:", error);
-    process.exit(1);
-  }
-
-  // Read and execute all migration files in order
-  const migrationsDir = path.join(__dirname, "../schema/migrations");
-  try {
-    if (fs.existsSync(migrationsDir)) {
-      const files = fs
-        .readdirSync(migrationsDir)
-        .filter((file) => file.endsWith(".sql"))
-        .sort(); // Sort to ensure correct order
-
-      for (const file of files) {
-        const filePath = path.join(migrationsDir, file);
-        const success = await executeMigration(filePath);
-        if (!success) {
-          console.error(`Migration ${file} failed. Stopping.`);
-          process.exit(1);
-        }
-      }
-    } else {
-      console.warn("Warning: migrations directory not found");
-    }
-  } catch (error) {
-    console.error("Error reading migrations directory:", error);
-    process.exit(1);
-  }
-
-  console.log("All migrations completed successfully.");
-  await pool.end();
-}
-
-// Run migrations
-runMigrations().catch((error) => {
-  console.error("Unhandled error during migrations:", error);
-  process.exit(1);
-});
+main();
