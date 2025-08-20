@@ -1,12 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import { RoleAssignmentService } from '../../services/role-assignment.service';
 import { RoleService } from '../../services/role.service';
-import { AppError } from './error-handler';
-import { logger } from '../../utils/logger';
+import { HttpError, HttpStatusCode } from '@vspl/core';
+import logger from '../../utils/logger';
 
 // Initialize services
 const roleAssignmentService = new RoleAssignmentService();
 const roleService = new RoleService();
+
+// Add property to Express Request
+declare global {
+    namespace Express {
+        interface Request {
+            assignableRoles?: any[];
+        }
+    }
+}
 
 /**
  * Middleware to validate if a user can assign a specific role
@@ -16,13 +25,13 @@ export const validateRoleAssignment = async (req: Request, res: Response, next: 
         // Get the assigner's user ID (from authenticated user)
         const assignerId = req.user?.id;
         if (!assignerId) {
-            return next(new AppError('Unauthorized', 401, 'UNAUTHORIZED'));
+            return next(new HttpError(HttpStatusCode.UNAUTHORIZED, 'Unauthorized'));
         }
 
         // Get the role to be assigned
-        let roleId = req.body.role_id;
+        const roleId = req.body.role_id;
         if (!roleId) {
-            return next(new AppError('Role ID is required', 400, 'BAD_REQUEST'));
+            return next(new HttpError(HttpStatusCode.BAD_REQUEST, 'Role ID is required'));
         }
 
         // Get organization context if available
@@ -31,14 +40,14 @@ export const validateRoleAssignment = async (req: Request, res: Response, next: 
         // Get the role name from the ID
         const role = await roleService.getRoleById(roleId);
         if (!role) {
-            return next(new AppError('Role not found', 404, 'NOT_FOUND'));
+            return next(new HttpError(HttpStatusCode.NOT_FOUND, 'Role not found'));
         }
 
         // Validate if the user can assign this role
         const canAssign = await roleAssignmentService.validateRoleAssignment(
             assignerId,
             role.name,
-            organizationId
+            organizationId,
         );
 
         if (!canAssign) {
@@ -46,9 +55,14 @@ export const validateRoleAssignment = async (req: Request, res: Response, next: 
                 assignerId,
                 roleId,
                 roleName: role.name,
-                organizationId
+                organizationId,
             });
-            return next(new AppError('You do not have permission to assign this role', 403, 'FORBIDDEN'));
+            return next(
+                new HttpError(
+                    HttpStatusCode.FORBIDDEN,
+                    'You do not have permission to assign this role',
+                ),
+            );
         }
 
         // If validated, continue
@@ -68,12 +82,15 @@ export const getAssignableRoles = async (req: Request, res: Response, next: Next
     try {
         const userId = req.user?.id;
         if (!userId) {
-            return next(new AppError('Unauthorized', 401, 'UNAUTHORIZED'));
+            return next(new HttpError(HttpStatusCode.UNAUTHORIZED, 'Unauthorized'));
         }
 
         const organizationId = req.query.organizationId?.toString();
 
-        const assignableRoles = await roleAssignmentService.getAssignableRoles(userId, organizationId);
+        const assignableRoles = await roleAssignmentService.getAssignableRoles(
+            userId,
+            organizationId,
+        );
 
         // Attach to request for use in controller
         req.assignableRoles = assignableRoles;
@@ -85,4 +102,4 @@ export const getAssignableRoles = async (req: Request, res: Response, next: Next
         });
         next(error);
     }
-}; 
+};

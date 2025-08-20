@@ -23,12 +23,12 @@ export class OrganizationController {
             // Pass setup code to service if available
             const organization = await this.organizationService.createOrganizationProfile(
                 organizationData,
-                (req as any).setupCode
+                
             );
 
             res.status(201).json({
                 success: true,
-                data: organization
+                data: organization,
             });
         } catch (error) {
             logger.error('Error creating organization', { error });
@@ -39,49 +39,48 @@ export class OrganizationController {
     /**
      * Create a new organization and assign the current user as admin
      */
-    async createOrganizationWithAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    async createOrganizationWithAdmin(
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ): Promise<void> {
         try {
             const { organizationData, userId } = req.body;
 
             if (!userId) {
                 res.status(400).json({
                     success: false,
-                    message: 'User ID is required'
+                    message: 'User ID is required',
                 });
                 return;
             }
 
             // Create the organization
-            const organization = await this.organizationService.createOrganizationProfile(
-                organizationData
-            );
+            const organization =
+                await this.organizationService.createOrganizationProfile(organizationData);
 
             // Assign the user as admin
             try {
-                await this.roleService.assignRoleToUserByName(
-                    userId,
-                    ROLES.ADMIN,
-                    organization.id
-                );
-                
+                await this.roleService.assignRoleToUserByName(userId, ROLES.ADMIN, organization.id);
+
                 logger.info('User assigned as admin for new organization', {
                     userId,
-                    organizationId: organization.id
+                    organizationId: organization.id,
                 });
             } catch (roleError) {
                 logger.error('Failed to assign admin role to user', {
                     error: roleError,
                     userId,
-                    organizationId: organization.id
+                    organizationId: organization.id,
                 });
-                
+
                 // Continue with the response even if role assignment fails
                 // The organization was created successfully
             }
 
             res.status(201).json({
                 success: true,
-                data: organization
+                data: organization,
             });
         } catch (error) {
             logger.error('Error creating organization with admin', { error });
@@ -95,19 +94,22 @@ export class OrganizationController {
     async getOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;
-            const organization = await this.organizationService.getOrganizationProfile(id, (req as any).setupCode);
+            const organization = await this.organizationService.getOrganizationProfile(
+                id,
+                
+            );
 
             if (!organization) {
                 res.status(404).json({
                     success: false,
-                    message: 'Organization not found'
+                    message: 'Organization not found',
                 });
                 return;
             }
 
             res.status(200).json({
                 success: true,
-                data: organization
+                data: organization,
             });
         } catch (error) {
             logger.error('Error getting organization', { error, id: req.params.id });
@@ -126,20 +128,20 @@ export class OrganizationController {
             const organization = await this.organizationService.updateOrganizationProfile(
                 id,
                 updateData,
-                (req as any).setupCode
+                
             );
 
             if (!organization) {
                 res.status(404).json({
                     success: false,
-                    message: 'Organization not found'
+                    message: 'Organization not found',
                 });
                 return;
             }
 
             res.status(200).json({
                 success: true,
-                data: organization
+                data: organization,
             });
         } catch (error) {
             logger.error('Error updating organization', { error, id: req.params.id });
@@ -150,7 +152,11 @@ export class OrganizationController {
     /**
      * Update organization branding (logo and colors)
      */
-    async updateOrganizationBranding(req: Request, res: Response, next: NextFunction): Promise<void> {
+    async updateOrganizationBranding(
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ): Promise<void> {
         try {
             const { id } = req.params;
             const brandingData = req.body;
@@ -159,26 +165,26 @@ export class OrganizationController {
             const updateData = {
                 logo_url: brandingData.logo_url,
                 primary_color: brandingData.primary_color,
-                secondary_color: brandingData.secondary_color
+                secondary_color: brandingData.secondary_color,
             };
 
             const organization = await this.organizationService.updateOrganizationProfile(
                 id,
                 updateData,
-                (req as any).setupCode
+                
             );
 
             if (!organization) {
                 res.status(404).json({
                     success: false,
-                    message: 'Organization not found'
+                    message: 'Organization not found',
                 });
                 return;
             }
 
             res.status(200).json({
                 success: true,
-                data: organization
+                data: organization,
             });
         } catch (error) {
             logger.error('Error updating organization branding', { error, id: req.params.id });
@@ -189,17 +195,24 @@ export class OrganizationController {
     /**
      * Complete organization setup process
      */
-    async completeOrganizationSetup(req: Request, res: Response, next: NextFunction): Promise<void> {
+    async completeOrganizationSetup(
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ): Promise<void> {
         try {
             const { id } = req.params;
 
             // Verify organization exists
-            const organization = await this.organizationService.getOrganizationProfile(id, (req as any).setupCode);
+            const organization = await this.organizationService.getOrganizationProfile(
+                id,
+                
+            );
 
             if (!organization) {
                 res.status(404).json({
                     success: false,
-                    message: 'Organization not found'
+                    message: 'Organization not found',
                 });
                 return;
             }
@@ -219,16 +232,16 @@ export class OrganizationController {
                     config: {
                         ...organization.config,
                         setup_completed: true,
-                        setup_completed_at: new Date().toISOString()
-                    }
+                        setup_completed_at: new Date().toISOString(),
+                    },
                 },
-                (req as any).setupCode
+                
             );
 
             if (!updatedOrg) {
                 res.status(500).json({
                     success: false,
-                    message: 'Failed to update organization status'
+                    message: 'Failed to update organization status',
                 });
                 return;
             }
@@ -239,8 +252,8 @@ export class OrganizationController {
                 data: {
                     id: updatedOrg.id,
                     name: updatedOrg.name,
-                    status: updatedOrg.status
-                }
+                    status: updatedOrg.status,
+                },
             });
         } catch (error) {
             logger.error('Error completing organization setup', { error, id: req.params.id });
@@ -254,19 +267,22 @@ export class OrganizationController {
     async deleteOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;
-            const deleted = await this.organizationService.deleteOrganizationProfile(id, (req as any).setupCode);
+            const deleted = await this.organizationService.deleteOrganizationProfile(
+                id,
+                
+            );
 
             if (!deleted) {
                 res.status(404).json({
                     success: false,
-                    message: 'Organization not found'
+                    message: 'Organization not found',
                 });
                 return;
             }
 
             res.status(200).json({
                 success: true,
-                message: 'Organization deleted successfully'
+                message: 'Organization deleted successfully',
             });
         } catch (error) {
             logger.error('Error deleting organization', { error, id: req.params.id });
@@ -288,8 +304,7 @@ export class OrganizationController {
             const result = await this.organizationService.getOrganizationProfiles(
                 filters,
                 Number(limit),
-                Number(offset),
-                (req as any).setupCode
+                Number(offset)
             );
 
             res.status(200).json({
@@ -298,12 +313,12 @@ export class OrganizationController {
                     items: result.profiles,
                     total: result.total,
                     limit: Number(limit),
-                    offset: Number(offset)
-                }
+                    offset: Number(offset),
+                },
             });
         } catch (error) {
             logger.error('Error listing organizations', { error, query: req.query });
             next(error);
         }
     }
-} 
+}

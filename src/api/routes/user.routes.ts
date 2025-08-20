@@ -10,7 +10,7 @@ import {
     GetUserValidator,
     DeleteUserValidator,
     ListUsersValidator,
-    GetCurrentUserValidator
+    GetCurrentUserValidator,
 } from '../validators/user.validator';
 import { Permission } from '../../models/enums/roles.enum';
 
@@ -24,7 +24,7 @@ export const createUserRoutes = (userController: UserController) => {
         authenticate,
         authorize(Permission.MANAGE_USERS),
         validateRequest(CreateUserValidator),
-        userController.createUser.bind(userController)
+        userController.createUser.bind(userController),
     );
 
     // Get current authenticated user
@@ -33,7 +33,7 @@ export const createUserRoutes = (userController: UserController) => {
         authenticate,
         loadUser,
         validateRequest(GetCurrentUserValidator),
-        userController.getCurrentUser.bind(userController)
+        userController.getCurrentUser.bind(userController),
     );
 
     // Get user by ID - requires view_all_users permission
@@ -42,7 +42,7 @@ export const createUserRoutes = (userController: UserController) => {
         serviceAuth, // Add service auth middleware
         authenticate,
         validateRequest(GetUserValidator),
-        userController.getUser.bind(userController)
+        userController.getUser.bind(userController),
     );
 
     // Update user - requires manage_users permission
@@ -52,7 +52,7 @@ export const createUserRoutes = (userController: UserController) => {
         authenticate,
         authorize(Permission.MANAGE_USERS),
         validateRequest(UpdateUserValidator),
-        userController.updateUser.bind(userController)
+        userController.updateUser.bind(userController),
     );
 
     // Delete user - requires manage_users permission
@@ -62,7 +62,7 @@ export const createUserRoutes = (userController: UserController) => {
         authenticate,
         authorize(Permission.MANAGE_USERS),
         validateRequest(DeleteUserValidator),
-        userController.deleteUser.bind(userController)
+        userController.deleteUser.bind(userController),
     );
 
     // List users with optional filtering - requires view_all_users permission
@@ -72,8 +72,8 @@ export const createUserRoutes = (userController: UserController) => {
         authenticate,
         authorize(Permission.VIEW_ALL_USERS),
         validateRequest(ListUsersValidator),
-        userController.listUsers.bind(userController)
+        userController.listUsers.bind(userController),
     );
 
     return router;
-}; 
+};

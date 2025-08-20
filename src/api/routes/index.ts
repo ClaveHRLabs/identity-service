@@ -17,7 +17,7 @@ export const registerRoutes = (
     organizationController: OrganizationController,
     setupCodeController: SetupCodeController,
     userController: UserController,
-    authController: AuthController
+    authController: AuthController,
 ) => {
     // Create route handlers
     const organizationRouter = createOrganizationRoutes(organizationController);
@@ -38,8 +38,8 @@ export const registerRoutes = (
     app.get(
         `${apiPrefix}/organizations/:organizationId/setup-codes`,
         validateRequest(ListSetupCodesValidator),
-        setupCodeController.getOrganizationSetupCodes.bind(setupCodeController)
+        setupCodeController.getOrganizationSetupCodes.bind(setupCodeController),
     );
 
     return app;
-}; 
+};

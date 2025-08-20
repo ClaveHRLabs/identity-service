@@ -1,9 +1,7 @@
 import { z } from 'zod';
+import { TOKEN } from '../../constants/app.constants';
 
-// Common validation patterns and error messages
-const patterns = {
-    email: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-};
+// Common validation error messages
 
 const messages = {
     required: 'This field is required',
@@ -49,7 +47,7 @@ export const AuthProviderSchema = z.object({
 export const MagicLinkSchema = z.object({
     id: z.string().uuid(),
     email: z.string().email(messages.email),
-    token: z.string().min(20),
+    token: z.string().min(TOKEN.MIN_LENGTH),
     expires_at: z.date(),
     used: z.boolean().default(false),
     used_at: z.date().optional(),
@@ -61,7 +59,7 @@ export const MagicLinkSchema = z.object({
 export const RefreshTokenSchema = z.object({
     id: z.string().uuid(),
     user_id: z.string().uuid(),
-    token: z.string().min(20),
+    token: z.string().min(TOKEN.MIN_LENGTH),
     expires_at: z.date(),
     revoked: z.boolean().default(false),
     created_at: z.date(),
@@ -98,7 +96,7 @@ export const CreateAuthProviderSchema = z.object({
 
 export const CreateMagicLinkSchema = z.object({
     email: z.string().email(messages.email),
-    expiration_minutes: z.number().positive().default(30),
+    expiration_minutes: z.number().positive().default(TOKEN.DEFAULT_EXPIRATION_MINUTES),
     metadata: z.record(z.any()).optional(),
 });
 
@@ -113,19 +111,19 @@ export const CreateRefreshTokenSchema = z.object({
 export const GoogleAuthSchema = z.object({
     code: z.string(),
     redirect_uri: z.string().url(),
-    state: z.string().optional()
+    state: z.string().optional(),
 });
 
 export const MicrosoftAuthSchema = z.object({
     code: z.string(),
     redirect_uri: z.string().url(),
-    state: z.string().optional()
+    state: z.string().optional(),
 });
 
 export const LinkedInAuthSchema = z.object({
     code: z.string(),
     redirect_uri: z.string().url(),
-    state: z.string().optional()
+    state: z.string().optional(),
 });
 
 // OAuth initialization schema
@@ -160,4 +158,4 @@ export type GoogleAuth = z.infer<typeof GoogleAuthSchema>;
 export type MicrosoftAuth = z.infer<typeof MicrosoftAuthSchema>;
 export type LinkedInAuth = z.infer<typeof LinkedInAuthSchema>;
 export type SendMagicLink = z.infer<typeof SendMagicLinkSchema>;
-export type VerifyMagicLink = z.infer<typeof VerifyMagicLinkSchema>; 
+export type VerifyMagicLink = z.infer<typeof VerifyMagicLinkSchema>;

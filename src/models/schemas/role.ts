@@ -71,4 +71,4 @@ export type UpdateRole = z.infer<typeof UpdateRoleSchema>;
 export type CreatePermission = z.infer<typeof CreatePermissionSchema>;
 export type UpdatePermission = z.infer<typeof UpdatePermissionSchema>;
 export type AssignRole = z.infer<typeof AssignRoleSchema>;
-export type AssignPermission = z.infer<typeof AssignPermissionSchema>; 
+export type AssignPermission = z.infer<typeof AssignPermissionSchema>;

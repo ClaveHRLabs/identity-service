@@ -2,27 +2,26 @@ import db from './db';
 import {
     OrganizationProfile,
     CreateOrganizationProfile,
-    UpdateOrganizationProfile
+    UpdateOrganizationProfile,
 } from '../models/schemas/organization';
 
 /**
  * Get an organization profile by ID
  */
 export async function getOrganizationProfileById(id: string): Promise<OrganizationProfile | null> {
-    const result = await db.query(
-        'SELECT * FROM organization_profiles WHERE id = $1',
-        [id]
-    );
+    const result = await db.query('SELECT * FROM organization_profiles WHERE id = $1', [id]);
     return result.rows[0] || null;
 }
 
 /**
  * Find organization profile by name (case-insensitive)
  */
-export async function findOrganizationProfileByName(name: string): Promise<OrganizationProfile | null> {
+export async function findOrganizationProfileByName(
+    name: string,
+): Promise<OrganizationProfile | null> {
     const result = await db.query(
         'SELECT * FROM organization_profiles WHERE LOWER(name) = LOWER($1)',
-        [name]
+        [name],
     );
     return result.rows[0] || null;
 }
@@ -31,7 +30,7 @@ export async function findOrganizationProfileByName(name: string): Promise<Organ
  * Create a new organization profile
  */
 export async function createOrganizationProfile(
-    data: CreateOrganizationProfile
+    data: CreateOrganizationProfile,
 ): Promise<OrganizationProfile> {
     // Create the SQL query dynamically based on provided fields
     const keys = Object.keys(data);
@@ -44,7 +43,7 @@ export async function createOrganizationProfile(
         `INSERT INTO organization_profiles (${columns}) 
      VALUES (${placeholders}) 
      RETURNING *`,
-        values
+        values,
     );
 
     return result.rows[0];
@@ -55,7 +54,7 @@ export async function createOrganizationProfile(
  */
 export async function updateOrganizationProfile(
     id: string,
-    data: UpdateOrganizationProfile
+    data: UpdateOrganizationProfile,
 ): Promise<OrganizationProfile | null> {
     // Skip update if no data provided
     if (Object.keys(data).length === 0) {
@@ -73,7 +72,7 @@ export async function updateOrganizationProfile(
      SET ${setClauses} 
      WHERE id = $${keys.length + 1} 
      RETURNING *`,
-        [...values, id]
+        [...values, id],
     );
 
     return result.rows[0] || null;
@@ -83,10 +82,9 @@ export async function updateOrganizationProfile(
  * Delete an organization profile
  */
 export async function deleteOrganizationProfile(id: string): Promise<boolean> {
-    const result = await db.query(
-        'DELETE FROM organization_profiles WHERE id = $1 RETURNING id',
-        [id]
-    );
+    const result = await db.query('DELETE FROM organization_profiles WHERE id = $1 RETURNING id', [
+        id,
+    ]);
 
     return result.rowCount ? result.rowCount > 0 : false;
 }
@@ -97,7 +95,7 @@ export async function deleteOrganizationProfile(id: string): Promise<boolean> {
 export async function getOrganizationProfiles(
     filters: { status?: string; subscription_tier?: string } = {},
     limit = 100,
-    offset = 0
+    offset = 0,
 ): Promise<OrganizationProfile[]> {
     const queryParams: any[] = [];
     let whereClause = '';
@@ -128,7 +126,7 @@ export async function getOrganizationProfiles(
      ORDER BY created_at DESC 
      LIMIT $${queryParams.length - 1} 
      OFFSET $${queryParams.length}`,
-        queryParams
+        queryParams,
     );
 
     return result.rows;
@@ -138,7 +136,7 @@ export async function getOrganizationProfiles(
  * Count organization profiles with optional filtering
  */
 export async function countOrganizationProfiles(
-    filters: { status?: string; subscription_tier?: string } = {}
+    filters: { status?: string; subscription_tier?: string } = {},
 ): Promise<number> {
     const queryParams: any[] = [];
     let whereClause = '';
@@ -161,7 +159,7 @@ export async function countOrganizationProfiles(
 
     const result = await db.query(
         `SELECT COUNT(*) as count FROM organization_profiles ${whereClause}`,
-        queryParams
+        queryParams,
     );
 
     return parseInt(result.rows[0].count, 10);
@@ -171,15 +169,17 @@ export async function countOrganizationProfiles(
  * Find organization by email domain
  * This uses a simple LIKE query to match the email domain with website URLs
  */
-export async function findOrganizationByEmailDomain(emailDomain: string): Promise<OrganizationProfile | null> {
+export async function findOrganizationByEmailDomain(
+    emailDomain: string,
+): Promise<OrganizationProfile | null> {
     const result = await db.query(
         `SELECT * FROM organization_profiles
          WHERE status = 'active'
          AND website IS NOT NULL
          AND website ILIKE $1
          LIMIT 1`,
-        [`%${emailDomain}%`]
+        [`%${emailDomain}%`],
     );
-    
+
     return result.rows[0] || null;
-} 
+}

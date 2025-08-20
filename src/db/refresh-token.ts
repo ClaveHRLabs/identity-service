@@ -34,8 +34,8 @@ export async function createRefreshToken(data: CreateRefreshToken): Promise<Refr
             data.user_id,
             hashedToken, // Store hashed token
             expires_at,
-            data.device_info || {}
-        ]
+            data.device_info || {},
+        ],
     );
 
     // If this is a newly generated token (not provided by caller),
@@ -54,10 +54,7 @@ export async function getRefreshTokenByToken(token: string): Promise<RefreshToke
     // Hash the token before querying
     const hashedToken = hashToken(token);
 
-    const result = await db.query(
-        'SELECT * FROM refresh_tokens WHERE token = $1',
-        [hashedToken]
-    );
+    const result = await db.query('SELECT * FROM refresh_tokens WHERE token = $1', [hashedToken]);
     return result.rows[0] || null;
 }
 
@@ -67,7 +64,7 @@ export async function getRefreshTokenByToken(token: string): Promise<RefreshToke
 export async function getRefreshTokensByUserId(userId: string): Promise<RefreshToken[]> {
     const result = await db.query(
         'SELECT * FROM refresh_tokens WHERE user_id = $1 AND revoked = false ORDER BY created_at DESC',
-        [userId]
+        [userId],
     );
     return result.rows;
 }
@@ -81,7 +78,7 @@ export async function revokeRefreshToken(id: string): Promise<RefreshToken | nul
          SET revoked = true
          WHERE id = $1
          RETURNING *`,
-        [id]
+        [id],
     );
     return result.rows[0] || null;
 }
@@ -95,7 +92,7 @@ export async function revokeAllUserRefreshTokens(userId: string): Promise<number
          SET revoked = true 
          WHERE user_id = $1 AND revoked = false 
          RETURNING id`,
-        [userId]
+        [userId],
     );
     return result.rowCount || 0;
 }
@@ -137,8 +134,8 @@ export async function cleanupRefreshTokens(): Promise<number> {
         `DELETE FROM refresh_tokens 
          WHERE expires_at < $1 OR revoked = true 
          RETURNING id`,
-        [now]
+        [now],
     );
 
     return result.rowCount || 0;
-} 
+}

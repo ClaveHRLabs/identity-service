@@ -1,13 +1,15 @@
-import db from './db/db';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
+import {
+    createApp,
+    MorganFormat,
+    createSingleton,
+    createFactory,
+    setupGracefulShutdown,
+    HttpStatusCode,
+} from '@vspl/core';
+import { Config, SERVICE_NAME } from './config/config';
 import rateLimit from 'express-rate-limit';
-import morgan from 'morgan';
-import { Config } from './config/config';
-import { errorHandler } from './api/middlewares/error-handler';
-import { requestIdMiddleware } from './api/middlewares/request-id';
-import { responseFormatter } from './api/middlewares/response-formatter';
+import { close as closeDb } from './db/db';
+import { RATE_LIMIT, TIMEOUTS, MESSAGES } from './constants/app.constants';
 import { OrganizationService } from './services/organization.service';
 import { SetupCodeService } from './services/setup-code.service';
 import { UserService } from './services/user.service';
@@ -20,95 +22,99 @@ import { UserController } from './api/controllers/user.controller';
 import { AuthController } from './api/controllers/auth.controller';
 import { registerRoutes } from './api/routes';
 import { EmailService } from './services/email.service';
+import logger from './utils/logger';
 
-// Singleton: Database Pool
-export const dbPool = db;
-
-// Singleton: Email Service for sending magic links and notifications
-export const emailService = new EmailService();
+// Singleton: Email Service
+export const emailService = createSingleton(() => new EmailService());
 
 // Factory: Services
-export const organizationService = new OrganizationService();
-export const setupCodeService = new SetupCodeService(organizationService);
-export const userService = new UserService();
-export const authService = new AuthService(userService, emailService);
-export const roleService = new RoleService();
-export const roleAssignmentService = new RoleAssignmentService();
+export const organizationService = createFactory(() => new OrganizationService());
+export const setupCodeService = createFactory(() => new SetupCodeService(organizationService()));
+export const userService = createFactory(() => new UserService());
+export const authService = createFactory(() => new AuthService(userService(), emailService()));
+export const roleService = createFactory(() => new RoleService());
+export const roleAssignmentService = createFactory(() => new RoleAssignmentService());
 
 // Factory: Controllers
-export const organizationController = new OrganizationController(organizationService, roleService);
-export const setupCodeController = new SetupCodeController(setupCodeService);
-export const userController = new UserController(userService);
-export const authController = new AuthController(authService);
+export const organizationController = createFactory(
+    () => new OrganizationController(organizationService(), roleService()),
+);
 
-/**
- * Create Express App with all middleware
- * Factory pattern for creating the Express application
- */
-export const createExpressApp = () => {
-    const app = express();
+export const setupCodeController = createFactory(() => new SetupCodeController(setupCodeService()));
 
-    // Security middlewares
-    app.use(helmet());
-    app.use(cors({
-        origin: process.env.CORS_ORIGIN || '*',
-        credentials: true,
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'x-setup-code', 'x-skip-auth'],
-        exposedHeaders: ['x-setup-code'],
-    }));
+export const userController = createFactory(() => new UserController(userService()));
 
-    // Rate limiting
-    const limiter = rateLimit({
-        windowMs: 15 * 60 * 1000, // 15 minutes
-        max: 100, // Limit each IP to 100 requests per windowMs
-        standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-        legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-        message: 'Too many requests from this IP, please try again later.',
+export const authController = createFactory(() => new AuthController(authService()));
+
+// Rate limiting middleware
+const limiter = rateLimit({
+    windowMs: RATE_LIMIT.WINDOW_MS,
+    max: RATE_LIMIT.MAX_REQUESTS,
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: MESSAGES.RATE_LIMIT_EXCEEDED,
+});
+
+// Create Express app with standard middleware
+export const app = createApp({
+    name: SERVICE_NAME,
+    morganFormat: MorganFormat.DEV,
+    errorHandlerOptions: {
+        includeStackTrace: Config.SHOW_ERROR_STACK,
+    },
+
+    middleware: [limiter],
+});
+
+// Add custom routes
+app.get('/health', (req, res) => {
+    res.status(HttpStatusCode.OK).json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        service: SERVICE_NAME,
+        status: 'UP',
+        version: process.env.npm_package_version || '1.0.0',
     });
-    app.use(limiter);
+});
 
-    // Request parsing
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
-
-    // Request ID middleware
-    app.use(requestIdMiddleware);
-
-    // Response formatter middleware
-    app.use(responseFormatter);
-
-    // HTTP request logging - using simple morgan format
-    app.use(morgan('combined'));
-
-    // Health check endpoint
-    app.get('/health', (req, res) => {
-        res.status(200).json({
-            success: true,
-            timestamp: new Date().toISOString(),
-            service: Config.SERVICE_NAME,
-            status: 'UP',
-            version: process.env.npm_package_version || '1.0.0',
-        });
+app.get('/ping', (req, res) => {
+    res.status(HttpStatusCode.OK).json({
+        success: true,
+        message: 'pong',
+        timestamp: new Date().toISOString(),
     });
+});
 
-    // Ping endpoint
-    app.get('/ping', (req, res) => {
-        res.status(200).json({
-            success: true,
-            message: 'pong',
-            timestamp: new Date().toISOString(),
-        });
-    });
+// Register API routes
+registerRoutes(
+    app,
+    organizationController(),
+    setupCodeController(),
+    userController(),
+    authController(),
+);
 
-    // Register API routes
-    registerRoutes(app, organizationController, setupCodeController, userController, authController);
-
-    // Error handling middleware (must be last)
-    app.use(errorHandler);
-
-    return app;
+// Setup graceful shutdown
+export const setupShutdown = (server: any) => {
+    return setupGracefulShutdown(
+        [
+            // Close HTTP server
+            async () => {
+                server.close();
+                logger.info('HTTP server closed');
+            },
+            // Close database connections
+            async () => {
+                await closeDb();
+                logger.info('Database connections closed');
+            },
+        ],
+        {
+            timeout: TIMEOUTS.GRACEFUL_SHUTDOWN_TIMEOUT_MS,
+            logger,
+            signals: ['SIGINT', 'SIGTERM'],
+            exit: true,
+            exitCode: 0,
+        },
+    );
 };
-
-// Factory: Express App
-export const app = createExpressApp(); 

@@ -1,20 +1,40 @@
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 import * as authProviderRepository from '../db/auth-provider';
 import * as magicLinkRepository from '../db/magic-link';
 import * as refreshTokenRepository from '../db/refresh-token';
 import { User } from '../models/schemas/user';
-import { AppError } from '../api/middlewares/error-handler';
+import { HttpError, HttpStatusCode, HttpClient, createHttpClient } from '@vspl/core';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
-import { Config } from '../config/config';
-import axios from 'axios';
+import {
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    MICROSOFT_CLIENT_ID,
+    MICROSOFT_CLIENT_SECRET,
+    LINKEDIN_CLIENT_ID,
+    LINKEDIN_CLIENT_SECRET,
+    FRONTEND_URL,
+} from '../config/config';
+import { OAUTH_URLS, AUTH, TOKEN, TIMEOUTS, HTTP_CLIENT } from '../constants/app.constants';
 
 export class AuthService {
     private readonly userService;
     private readonly emailService;
+    private readonly httpClient: HttpClient;
 
     constructor(userService: any, emailService: any) {
         this.userService = userService;
         this.emailService = emailService;
+
+        // Create HTTP client for external API calls
+        this.httpClient = createHttpClient({
+            baseUrl: '', // Will be overridden per request
+            timeout: TIMEOUTS.DEFAULT_HTTP_TIMEOUT_MS,
+            retryOptions: {
+                maxRetries: HTTP_CLIENT.MAX_RETRIES,
+                baseDelay: HTTP_CLIENT.BASE_DELAY_MS,
+                exponentialBackoff: HTTP_CLIENT.EXPONENTIAL_BACKOFF,
+            },
+        });
     }
 
     /**
@@ -28,7 +48,7 @@ export class AuthService {
         providerType: 'google' | 'microsoft' | 'linkedin',
         code: string,
         redirectUri: string,
-        state?: string
+        state?: string,
     ): Promise<{
         user: User;
         access_token: string;
@@ -38,344 +58,240 @@ export class AuthService {
             logger.info(`Starting ${providerType} OAuth authentication`, {
                 redirectUri: redirectUri,
                 hasCode: !!code,
-                hasState: !!state
+                hasState: !!state,
             });
 
             let tokenUrl: string;
             let userInfoUrl: string;
             let clientId: string;
             let clientSecret: string;
-            let tokenRequestConfig: any = {};
             let tokenRequestData: any;
 
-            // Configure provider-specific settings
+            // Configure based on provider type
             if (providerType === 'google') {
-                tokenUrl = 'https://oauth2.googleapis.com/token';
-                userInfoUrl = 'https://www.googleapis.com/oauth2/v3/userinfo';
-                clientId = Config.GOOGLE_CLIENT_ID;
-                clientSecret = Config.GOOGLE_CLIENT_SECRET;
+                tokenUrl = OAUTH_URLS.GOOGLE.TOKEN;
+                userInfoUrl = OAUTH_URLS.GOOGLE.USER_INFO;
+                clientId = GOOGLE_CLIENT_ID || '';
+                clientSecret = GOOGLE_CLIENT_SECRET || '';
                 tokenRequestData = {
                     code,
                     client_id: clientId,
                     client_secret: clientSecret,
                     redirect_uri: redirectUri,
-                    grant_type: 'authorization_code'
+                    grant_type: 'authorization_code',
                 };
-            } else if (providerType === 'linkedin') {
-                logger.info('Setting up LinkedIn authentication parameters');
-                tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
-                userInfoUrl = 'https://api.linkedin.com/v2/me';
-                clientId = Config.LINKEDIN_CLIENT_ID;
-                clientSecret = Config.LINKEDIN_CLIENT_SECRET;
-
-                // Check if we have the required configuration
-                if (!clientId || !clientSecret) {
-                    logger.error('LinkedIn OAuth configuration missing', {
-                        hasClientId: !!clientId,
-                        hasClientSecret: !!clientSecret
-                    });
-                    throw new Error('LinkedIn OAuth configuration missing');
-                }
-
-                // Create the form data for token request
-                const formData = new URLSearchParams();
-                formData.append('grant_type', 'authorization_code');
-                formData.append('code', code);
-                formData.append('client_id', clientId);
-                formData.append('client_secret', clientSecret);
-                formData.append('redirect_uri', redirectUri);
-
-                tokenRequestData = formData.toString();
-                tokenRequestConfig = {
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    }
-                };
-
-                logger.info('LinkedIn token request data prepared', {
-                    tokenUrl,
-                    userInfoUrl,
-                    requestDataLength: tokenRequestData.length
-                });
-            } else {
-                tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
-                userInfoUrl = 'https://graph.microsoft.com/v1.0/me';
-                clientId = Config.MICROSOFT_CLIENT_ID;
-                clientSecret = Config.MICROSOFT_CLIENT_SECRET;
-                tokenRequestData = new URLSearchParams({
+            } else if (providerType === 'microsoft') {
+                tokenUrl = OAUTH_URLS.MICROSOFT.TOKEN;
+                userInfoUrl = OAUTH_URLS.MICROSOFT.USER_INFO;
+                clientId = MICROSOFT_CLIENT_ID || '';
+                clientSecret = MICROSOFT_CLIENT_SECRET || '';
+                tokenRequestData = {
                     code,
                     client_id: clientId,
                     client_secret: clientSecret,
                     redirect_uri: redirectUri,
-                    grant_type: 'authorization_code'
-                });
-                tokenRequestConfig = {
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    }
-                };
-            }
-
-            // Exchange code for tokens
-            logger.info(`Making token request to ${tokenUrl}`);
-            let tokenResponse;
-            try {
-                tokenResponse = await axios.post(tokenUrl, tokenRequestData, tokenRequestConfig);
-                logger.info(`Token request successful for ${providerType}`);
-
-                // Log the entire token response for LinkedIn to help debug
-                if (providerType === 'linkedin') {
-                    logger.info('LinkedIn token response:', {
-                        data: JSON.stringify(tokenResponse.data),
-                        status: tokenResponse.status
-                    });
-                }
-            } catch (tokenError: any) {
-                logger.error(`Token request failed for ${providerType}`, {
-                    error: tokenError.message,
-                    status: tokenError.response?.status,
-                    data: tokenError.response?.data
-                });
-                throw new Error(`Failed to exchange code for tokens: ${tokenError.message}`);
-            }
-
-            const { access_token, refresh_token, expires_in } = tokenResponse.data;
-
-            if (!access_token) {
-                logger.error(`No access token received from ${providerType}`, { responseData: tokenResponse.data });
-                throw new Error(`No access token received from ${providerType}`);
-            }
-
-            // Get user info from provider
-            logger.info(`Fetching user info from ${userInfoUrl}`);
-            let userInfoResponse;
-            try {
-                userInfoResponse = await axios.get(userInfoUrl, {
-                    headers: { Authorization: `Bearer ${access_token}` }
-                });
-                logger.info(`User info request successful for ${providerType}`);
-            } catch (userInfoError: any) {
-                logger.error(`User info request failed for ${providerType}`, {
-                    error: userInfoError.message,
-                    status: userInfoError.response?.status,
-                    data: userInfoError.response?.data
-                });
-                throw new Error(`Failed to fetch user info: ${userInfoError.message}`);
-            }
-
-            const oauthUser = userInfoResponse.data;
-            logger.info(`Received user data from ${providerType}`, {
-                hasEmail: !!oauthUser.email,
-                responseFields: Object.keys(oauthUser),
-                userData: providerType === 'linkedin' ? JSON.stringify(oauthUser) : undefined
-            });
-
-            // For LinkedIn, we need to make an additional call to get the email address
-            let linkedinEmail;
-            if (providerType === 'linkedin') {
-                try {
-                    logger.info('Making additional request for LinkedIn email');
-                    const emailResponse = await axios.get('https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))', {
-                        headers: { Authorization: `Bearer ${access_token}` }
-                    });
-
-                    logger.info('LinkedIn email response received', {
-                        data: JSON.stringify(emailResponse.data)
-                    });
-
-                    // Extract email from LinkedIn's email endpoint response
-                    if (emailResponse.data &&
-                        emailResponse.data.elements &&
-                        emailResponse.data.elements.length > 0 &&
-                        emailResponse.data.elements[0]['handle~'] &&
-                        emailResponse.data.elements[0]['handle~'].emailAddress) {
-                        linkedinEmail = emailResponse.data.elements[0]['handle~'].emailAddress;
-                        logger.info(`LinkedIn email extracted: ${linkedinEmail}`);
-                    }
-                } catch (emailError: any) {
-                    logger.error('Failed to retrieve LinkedIn email', {
-                        error: emailError.message,
-                        status: emailError.response?.status,
-                        data: emailError.response?.data
-                    });
-                    // Continue without email - we'll try to extract it later or throw an error
-                }
-            }
-
-            // Extract user info based on provider
-            let email, firstName, lastName, displayName, avatarUrl, providerUserId, verified, metadata;
-
-            if (providerType === 'google') {
-                email = oauthUser.email;
-                firstName = oauthUser.given_name;
-                lastName = oauthUser.family_name;
-                displayName = oauthUser.name;
-                avatarUrl = oauthUser.picture;
-                providerUserId = oauthUser.sub;
-                verified = oauthUser.email_verified;
-                metadata = {
-                    name: oauthUser.name,
-                    picture: oauthUser.picture,
-                    locale: oauthUser.locale
+                    grant_type: 'authorization_code',
+                    scope: 'openid profile email User.Read',
                 };
             } else if (providerType === 'linkedin') {
-                // LinkedIn API v2 with r_liteprofile and r_emailaddress scopes
-                email = linkedinEmail; // Use email from separate request
-
-                // Extract profile data from LinkedIn API v2 format
-                firstName = oauthUser.localizedFirstName || oauthUser.firstName;
-                lastName = oauthUser.localizedLastName || oauthUser.lastName;
-                displayName = (firstName && lastName) ? `${firstName} ${lastName}` : undefined;
-                providerUserId = oauthUser.id;
-                verified = true; // LinkedIn accounts are considered verified
-
-                // LinkedIn doesn't directly return avatar URL in the basic profile
-
-                // If we still don't have an email, try various fields from the profile response
-                if (!email && oauthUser.emailAddress) {
-                    email = oauthUser.emailAddress;
-                }
-
-                // As a last resort, try other fields
-                if (!email && oauthUser.email) {
-                    email = oauthUser.email;
-                }
-
-                if (!email) {
-                    logger.error('No email found in LinkedIn profile', {
-                        profile: JSON.stringify(oauthUser),
-                        hasEmailResponse: !!linkedinEmail
-                    });
-                    throw new Error('LinkedIn profile is missing email address');
-                }
-
-                metadata = {
-                    display_name: displayName,
-                    provider_id: providerUserId,
-                    profile_data: JSON.stringify(oauthUser)
+                tokenUrl = OAUTH_URLS.LINKEDIN.TOKEN;
+                userInfoUrl = OAUTH_URLS.LINKEDIN.USER_INFO;
+                clientId = LINKEDIN_CLIENT_ID || '';
+                clientSecret = LINKEDIN_CLIENT_SECRET || '';
+                tokenRequestData = {
+                    code,
+                    client_id: clientId,
+                    client_secret: clientSecret,
+                    redirect_uri: redirectUri,
+                    grant_type: 'authorization_code',
                 };
-
-                logger.info('Extracted LinkedIn user info', {
-                    email,
-                    firstName,
-                    lastName,
-                    displayName,
-                    id: providerUserId
-                });
             } else {
-                email = oauthUser.mail || oauthUser.userPrincipalName;
-                firstName = oauthUser.givenName;
-                lastName = oauthUser.surname;
-                displayName = oauthUser.displayName;
-                providerUserId = oauthUser.id;
-                verified = true; // Microsoft accounts are considered verified
-                metadata = {
-                    display_name: oauthUser.displayName,
-                    job_title: oauthUser.jobTitle,
-                    office_location: oauthUser.officeLocation
-                };
+                throw new HttpError(HttpStatusCode.BAD_REQUEST, 'Invalid OAuth provider');
             }
 
-            // Check if this email is already registered
-            logger.info(`Looking up user by email: ${email}`);
-            let user = await this.userService.getUserByEmail(email);
+            if (!clientId || !clientSecret) {
+                throw new HttpError(
+                    HttpStatusCode.INTERNAL_SERVER_ERROR,
+                    `${providerType} OAuth credentials not configured`,
+                );
+            }
 
-            // Create a new user if not exists
+            logger.debug(`Getting ${providerType} OAuth token`, { tokenUrl });
+
+            // Exchange code for tokens
+            const tokenResponse = await this.httpClient.post(
+                tokenUrl,
+                providerType === 'google' ? undefined : tokenRequestData,
+                {
+                    params: providerType === 'google' ? tokenRequestData : undefined,
+                    headers: {
+                        'Content-Type':
+                            providerType === 'google'
+                                ? 'application/x-www-form-urlencoded'
+                                : 'application/json',
+                        Accept: 'application/json',
+                    },
+                },
+            );
+
+            const accessToken = (tokenResponse as any).data.access_token;
+            if (!accessToken) {
+                throw new HttpError(HttpStatusCode.BAD_REQUEST, 'Failed to get access token');
+            }
+
+            logger.debug(`Getting ${providerType} user profile`, { userInfoUrl });
+
+            // Get user profile
+            const userInfoResponse = await this.httpClient.get(userInfoUrl, {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            });
+
+            // Extract user data from response
+            let email: string;
+            let firstName: string | undefined;
+            let lastName: string | undefined;
+            let displayName: string | undefined;
+            let picture: string | undefined;
+
+            if (providerType === 'google') {
+                email = (userInfoResponse as any).data.email;
+                firstName = (userInfoResponse as any).data.given_name;
+                lastName = (userInfoResponse as any).data.family_name;
+                displayName = (userInfoResponse as any).data.name;
+                picture = (userInfoResponse as any).data.picture;
+            } else if (providerType === 'microsoft') {
+                email = (userInfoResponse as any).data.mail || (userInfoResponse as any).data.userPrincipalName;
+                firstName = (userInfoResponse as any).data.givenName;
+                lastName = (userInfoResponse as any).data.surname;
+                displayName = (userInfoResponse as any).data.displayName;
+            } else if (providerType === 'linkedin') {
+                email = (userInfoResponse as any).data.email;
+                firstName = (userInfoResponse as any).data.given_name;
+                lastName = (userInfoResponse as any).data.family_name;
+                displayName = `${firstName} ${lastName}`.trim();
+                picture = (userInfoResponse as any).data.picture;
+            } else {
+                throw new HttpError(HttpStatusCode.BAD_REQUEST, 'Unsupported OAuth provider');
+            }
+
+            if (!email) {
+                throw new HttpError(
+                    HttpStatusCode.BAD_REQUEST,
+                    'Failed to get user email from OAuth provider',
+                );
+            }
+
+            // Find or create user
+            let user = await this.userService.getUserByEmail(email);
+            
             if (!user) {
-                logger.info(`Creating new user with email: ${email}`);
+                // Create a new user if none exists with this email
                 user = await this.userService.createUser({
                     email,
-                    first_name: firstName,
-                    last_name: lastName,
+                    first_name: firstName || '',
+                    last_name: lastName || '',
                     display_name: displayName,
-                    avatar_url: avatarUrl,
-                    email_verified: verified
-                });
-            } else {
-                logger.info(`Found existing user with email: ${email}`);
-            }
-
-            // Save or update auth provider
-            const expiresAt = new Date();
-            expiresAt.setSeconds(expiresAt.getSeconds() + expires_in);
-
-            const authProvider = await authProviderRepository.getAuthProviderByEmailAndType(email, providerType);
-
-            if (authProvider) {
-                // Update tokens
-                logger.info(`Updating existing ${providerType} auth provider for user`);
-                await authProviderRepository.updateAuthProviderTokens(
-                    authProvider.id,
-                    access_token,
-                    refresh_token,
-                    expiresAt
-                );
-            } else {
-                // Create new auth provider
-                logger.info(`Creating new ${providerType} auth provider for user`);
-                await authProviderRepository.createAuthProvider({
-                    user_id: user.id,
-                    provider_type: providerType,
-                    provider_user_id: providerUserId,
-                    email,
-                    access_token,
-                    refresh_token,
-                    token_expires_at: expiresAt,
-                    metadata
+                    picture_url: picture,
+                    status: 'active',
                 });
             }
 
-            // Update last login time
-            await this.userService.updateLastLogin(user.id);
-
-            // Parse state if provided
-            let stateData = {};
-            if (state) {
-                try {
-                    stateData = JSON.parse(Buffer.from(state, 'base64').toString());
-                } catch (e) {
-                    logger.warn(`Failed to parse state: ${e}`);
-                }
-            }
-
-            // Generate JWT tokens (now async)
-            logger.info('Generating JWT tokens for user');
-            const [jwt_access_token, jwt_refresh_token] = await Promise.all([
-                generateAccessToken(user, stateData),
-                generateRefreshToken(user)
-            ]);
-
-            // Save refresh token to database - include the actual JWT token
-            logger.info('Saving refresh token to database');
-            const dbRefreshToken = await refreshTokenRepository.createRefreshToken({
+            // Link the OAuth provider to the user
+            await authProviderRepository.createAuthProvider({
                 user_id: user.id,
-                token: jwt_refresh_token, // Store the JWT refresh token hash
-                expiration_days: 7, // Default expiration
-                device_info: {
-                    source: `${providerType}_oauth`,
-                    state: stateData
-                }
+                email,
+                provider_type: providerType,
+                provider_user_id: email, // We use email as ID for simplicity
+                access_token: accessToken,
+                metadata: {
+                    profile_data: (userInfoResponse as any).data,
+                },
             });
 
-            logger.info(`${providerType} authentication successful for user: ${email}`);
-            return {
-                user,
-                access_token: jwt_access_token,
-                refresh_token: jwt_refresh_token
-            };
-        } catch (error: any) {
-            logger.error(`${providerType} authentication error`, {
-                error: error.message,
-                stack: error.stack
+            // Generate our own access and refresh tokens
+            const access_token = await generateAccessToken(user);
+            const refresh_token = await generateRefreshToken(user);
+
+            // Save refresh token
+            await refreshTokenRepository.createRefreshToken({
+                user_id: user.id,
+                token: refresh_token,
+                expiration_days: 7,
+
             });
-            throw new AppError(`Failed to authenticate with ${providerType}: ${error.message}`, 500, 'AUTH_ERROR');
+
+            return { user, access_token, refresh_token };
+        } catch (error) {
+            logger.error(`Error authenticating with ${providerType}`, {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                redirectUri,
+            });
+            throw error;
         }
+    }
+
+    /**
+     * Get OAuth authorization URL
+     * @param provider OAuth provider type (google, microsoft)
+     * @param redirectUri Redirect URI
+     * @param state Optional state parameter
+     */
+    getOAuthAuthorizationUrl(
+        provider: 'google' | 'microsoft' | 'linkedin',
+        redirectUri: string,
+        state?: string,
+    ): string {
+        let clientId = '';
+        let authUrl = '';
+        let scope = '';
+
+        if (provider === 'google') {
+            clientId = GOOGLE_CLIENT_ID || '';
+            authUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
+            scope = 'openid profile email';
+        } else if (provider === 'microsoft') {
+            clientId = MICROSOFT_CLIENT_ID || '';
+            authUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
+            scope = 'openid profile email User.Read';
+        } else if (provider === 'linkedin') {
+            clientId = LINKEDIN_CLIENT_ID || '';
+            authUrl = 'https://www.linkedin.com/oauth/v2/authorization';
+            scope = 'openid profile email';
+        }
+
+        if (!clientId) {
+            throw new HttpError(
+                HttpStatusCode.INTERNAL_SERVER_ERROR,
+                `${provider} OAuth credentials not configured`,
+            );
+        }
+
+        const params = new URLSearchParams({
+            client_id: clientId,
+            redirect_uri: redirectUri,
+            response_type: 'code',
+            scope: scope,
+            access_type: 'offline',
+            prompt: 'consent',
+        });
+
+        if (state) {
+            params.append('state', state);
+        }
+
+        return `${authUrl}?${params.toString()}`;
     }
 
     /**
      * Authenticate with Google OAuth
      */
-    async authenticateWithGoogle(code: string, redirectUri: string, state?: string): Promise<{
+    async authenticateWithGoogle(
+        code: string,
+        redirectUri: string,
+        state?: string,
+    ): Promise<{
         user: User;
         access_token: string;
         refresh_token: string;
@@ -386,7 +302,11 @@ export class AuthService {
     /**
      * Authenticate with Microsoft OAuth
      */
-    async authenticateWithMicrosoft(code: string, redirectUri: string, state?: string): Promise<{
+    async authenticateWithMicrosoft(
+        code: string,
+        redirectUri: string,
+        state?: string,
+    ): Promise<{
         user: User;
         access_token: string;
         refresh_token: string;
@@ -397,7 +317,11 @@ export class AuthService {
     /**
      * Authenticate with LinkedIn OAuth
      */
-    async authenticateWithLinkedIn(code: string, redirectUri: string, state?: string): Promise<{
+    async authenticateWithLinkedIn(
+        code: string,
+        redirectUri: string,
+        state?: string,
+    ): Promise<{
         user: User;
         access_token: string;
         refresh_token: string;
@@ -406,142 +330,57 @@ export class AuthService {
     }
 
     /**
-     * Generate OAuth authorization URL
-     * @param provider OAuth provider (google or microsoft)
-     * @param redirectUri Client redirect URI
-     * @param state Optional state parameter for additional context
+     * Send magic link to user's email
      */
-    getOAuthAuthorizationUrl(
-        provider: 'google' | 'microsoft' | 'linkedin',
-        redirectUri: string,
-        state?: string
-    ): string {
-        let url: string;
-        let clientId: string;
-
-        if (provider === 'google') {
-            url = 'https://accounts.google.com/o/oauth2/v2/auth';
-            clientId = Config.GOOGLE_CLIENT_ID;
-
-            const params = new URLSearchParams({
-                client_id: clientId,
-                redirect_uri: redirectUri,
-                response_type: 'code',
-                scope: 'email profile openid',
-                access_type: 'offline',
-                prompt: 'consent'
-            });
-
-            if (state) params.append('state', state);
-
-            return `${url}?${params.toString()}`;
-        } else if (provider === 'linkedin') {
-            url = 'https://www.linkedin.com/oauth/v2/authorization';
-            clientId = Config.LINKEDIN_CLIENT_ID;
-
-            const params = new URLSearchParams({
-                client_id: clientId,
-                redirect_uri: redirectUri,
-                response_type: 'code',
-                scope: 'r_liteprofile r_emailaddress',
-            });
-
-            if (state) params.append('state', state);
-
-            logger.info('Generated LinkedIn OAuth URL', {
-                url,
-                redirectUri,
-                scopes: 'r_liteprofile r_emailaddress'
-            });
-
-            return `${url}?${params.toString()}`;
-        } else {
-            url = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
-            clientId = Config.MICROSOFT_CLIENT_ID;
-
-            const params = new URLSearchParams({
-                client_id: clientId,
-                redirect_uri: redirectUri,
-                response_type: 'code',
-                scope: 'user.read openid profile email',
-                response_mode: 'query'
-            });
-
-            if (state) params.append('state', state);
-
-            return `${url}?${params.toString()}`;
-        }
-    }
-
-    /**
-     * Send a magic link for email authentication
-     */
-    async sendMagicLink(email: string, redirectUri?: string): Promise<void> {
+    async sendMagicLink(email: string, redirectUri: string): Promise<boolean> {
         try {
-            // Create or get magic link
-            const magicLink = await magicLinkRepository.createMagicLink({
-                email,
-                expiration_minutes: 30,
-                metadata: redirectUri ? { redirect_uri: redirectUri } : {}
-            });
+            logger.info('Sending magic link to user', { email, redirectUri });
 
-            // Get user or create one if it doesn't exist
+            // Check if user exists
             let user = await this.userService.getUserByEmail(email);
-            let userName = 'User';
-            let organizationId = 'b7cb3474-e7dc-49a6-bf07-e3aa4a6932c0';
-            let organizationName = 'Clave HR';
 
+            // Create user if not exists (simplified onboarding)
             if (!user) {
-                // Create a new user with just email
+                logger.info('Creating new user for magic link', { email });
                 user = await this.userService.createUser({
                     email,
-                    email_verified: false
+                    status: 'active',
                 });
-
-                // Create email auth provider
-                await authProviderRepository.createAuthProvider({
-                    user_id: user.id,
-                    provider_type: 'email',
-                    email
-                });
-            } else {
-                // Get user's name if available
-                userName = user.first_name ? 
-                    (user.first_name + (user.last_name ? ' ' + user.last_name : '')) : 
-                    email.split('@')[0]; // Use part of email as name if no name available
-                
-                // Get user's organization
-                if (user.id) {
-                    organizationId = await this.getUserOrganizationId(user.id);
-
-                    // Get organization name
-                    const organization = await this.userService.getOrganizationById(organizationId);
-                    organizationName = organization.name;
-                }
             }
 
-            // Generate magic link URL 
+            // Generate magic link token
+            const token =
+                Math.random().toString(36).substring(2, AUTH.RANDOM_TOKEN_LENGTH) +
+                Math.random().toString(36).substring(2, AUTH.RANDOM_TOKEN_LENGTH);
 
-            const verificationUrl = `${Config.FRONTEND_URL}/verify-email?token=${magicLink.token}`;
+            // Save token
+            await magicLinkRepository.createMagicLink({
+                email: user.email,
+                expiration_minutes: TOKEN.MAGIC_LINK_EXPIRATION_MINUTES,
+                metadata: {
+                    redirect_uri: redirectUri,
+                    token: token,
+                }
+            });
 
-            // Send magic link email with user's name and organization info
-            await this.emailService.sendMagicLinkEmail(
-                email, 
-                verificationUrl, 
-                userName,
-                organizationId,
-                organizationName
-            );
+            // Generate magic link URL
+            const magicLinkUrl = `${FRONTEND_URL}/auth/verify?token=${token}`;
 
-            logger.info('Magic link sent successfully', { email });
+            // Send email with magic link
+            await this.emailService.sendMagicLinkEmail(email, magicLinkUrl);
+
+            return true;
         } catch (error) {
-            logger.error('Error sending magic link', { error, email });
-            throw new AppError('Failed to send magic link', 500, 'EMAIL_ERROR');
+            logger.error('Error sending magic link', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                email,
+            });
+            throw error;
         }
     }
 
     /**
-     * Verify a magic link token and authenticate the user
+     * Verify magic link token
      */
     async verifyMagicLink(token: string): Promise<{
         success: boolean;
@@ -552,196 +391,181 @@ export class AuthService {
         };
     }> {
         try {
-            // Validate the magic link
-            const validation = await magicLinkRepository.validateMagicLink(token);
+            logger.info('Verifying magic link token');
 
-            if (!validation.valid || !validation.magicLink) {
+            // Find magic link token
+            const magicLink = await magicLinkRepository.getMagicLinkByToken(token);
+
+            // Check if token exists
+            if (!magicLink) {
+                logger.warn('Magic link token not found', { token });
                 return {
                     success: false,
-                    message: validation.message || 'Invalid magic link'
+                    message: 'Invalid token',
                 };
             }
 
-            // Mark the magic link as used
-            await magicLinkRepository.markMagicLinkAsUsed(validation.magicLink.id);
+            // Check if token is expired
+            if (magicLink.expires_at < new Date()) {
+                logger.warn('Magic link token expired', { token });
+                return {
+                    success: false,
+                    message: 'Token expired',
+                };
+            }
 
-            // Get or create the user
-            const email = validation.magicLink.email;
-            let user = await this.userService.getUserByEmail(email);
+            // Check if token is already used
+            if (magicLink.used) {
+                logger.warn('Magic link token already used', { token });
+                return {
+                    success: false,
+                    message: 'Token already used',
+                };
+            }
 
+            // Get user
+            const user = await this.userService.getUserByEmail(magicLink.email);
             if (!user) {
-                // Create a new user with just email
-                user = await this.userService.createUser({
-                    email,
-                    email_verified: true
+                logger.warn('User not found for magic link token', {
+                    token,
+                    email: magicLink.email,
                 });
-
-                // Create email auth provider
-                await authProviderRepository.createAuthProvider({
-                    user_id: user.id,
-                    provider_type: 'email',
-                    email
-                });
+                return {
+                    success: false,
+                    message: 'User not found',
+                };
             }
 
-            // Set email as verified if it wasn't already
-            if (!user.email_verified) {
-                user = await this.userService.setEmailVerified(user.id, true);
-            }
+            // Mark token as used
+            await magicLinkRepository.markMagicLinkAsUsed(token);
 
-            // Update last login time
-            await this.userService.updateLastLogin(user.id);
+            // Generate access and refresh tokens
+            const access_token = await generateAccessToken(user);
+            const refresh_token = await generateRefreshToken(user);
 
-            // Generate JWT tokens
-            const [access_token, refresh_token] = await Promise.all([
-                generateAccessToken(user),
-                generateRefreshToken(user)
-            ]);
-
-            // Save refresh token to database
+            // Save refresh token
             await refreshTokenRepository.createRefreshToken({
                 user_id: user.id,
-                token: refresh_token, // Store the JWT refresh token hash
-                expiration_days: 7, // Default expiration
-                device_info: { source: 'magic_link' }
+                token: refresh_token,
+                expiration_days: 7,
+
             });
 
             return {
                 success: true,
                 tokens: {
                     access_token,
-                    refresh_token
-                }
+                    refresh_token,
+                },
             };
         } catch (error) {
-            logger.error('Error verifying magic link', { error, token });
-            throw new AppError('Failed to verify magic link', 500, 'AUTH_ERROR');
+            logger.error('Error verifying magic link', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                token,
+            });
+            throw error;
         }
     }
 
     /**
- * Refresh an access token using a refresh token
- */
+     * Refresh access token using refresh token
+     */
     async refreshToken(refreshToken: string): Promise<{
         success: boolean;
         message?: string;
         access_token?: string;
     }> {
         try {
-            logger.info('Processing refresh token request');
+            logger.info('Refreshing token');
 
-            // First verify the JWT token validity and extract the payload
-            let payload;
+            // Verify refresh token
+            let payload: any;
             try {
                 payload = await verifyRefreshToken(refreshToken);
-
-                // Ensure this is a refresh token
-                if (payload.type !== 'refresh') {
-                    logger.warn('Invalid token type for refresh', { type: payload.type });
-                    return {
-                        success: false,
-                        message: 'Invalid token type'
-                    };
-                }
-
-                // Extract user ID from the JWT payload
-                const userId = payload.sub;
-                logger.info('JWT refresh token verified', { userId });
-
-                // Next, check if this token exists in our database for verification
-                const dbValidation = await refreshTokenRepository.validateRefreshToken(refreshToken);
-
-                if (!dbValidation.valid) {
-                    logger.warn('Refresh token not found in database or invalid', {
-                        message: dbValidation.message
-                    });
-                    return {
-                        success: false,
-                        message: dbValidation.message || 'Refresh token revoked or expired in database'
-                    };
-                }
-
-                // Get the user from the ID in the JWT
-                const user = await this.userService.getUserById(userId);
-
-                if (!user) {
-                    logger.warn('User not found for refresh token', { userId });
-                    return {
-                        success: false,
-                        message: 'User not found'
-                    };
-                }
-
-                // Generate only a new access token, not a new refresh token
-                const accessToken = await generateAccessToken(user);
-
-                logger.info('Access token refreshed successfully', { userId });
-
-                return {
-                    success: true,
-                    access_token: accessToken
-                };
-            } catch (jwtError) {
-                logger.error('Failed to verify JWT refresh token', { error: jwtError });
+            } catch (error) {
+                logger.warn('Invalid refresh token', {
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                });
                 return {
                     success: false,
-                    message: 'Invalid refresh token signature or format'
+                    message: 'Invalid refresh token',
                 };
             }
+
+            // Check if token exists in database
+            const tokenRecord = await refreshTokenRepository.getRefreshTokenByToken(refreshToken);
+            if (!tokenRecord) {
+                logger.warn('Refresh token not found in database');
+                return {
+                    success: false,
+                    message: 'Invalid refresh token',
+                };
+            }
+
+            // Check if token is expired
+            if (tokenRecord.expires_at < new Date()) {
+                logger.warn('Refresh token expired');
+                return {
+                    success: false,
+                    message: 'Token expired',
+                };
+            }
+
+            // Get user
+            const user = await this.userService.getUserById(payload.sub);
+            if (!user) {
+                logger.warn('User not found for refresh token', { userId: payload.sub });
+                return {
+                    success: false,
+                    message: 'User not found',
+                };
+            }
+
+            // Generate new access token
+            const access_token = await generateAccessToken(user);
+
+            return {
+                success: true,
+                access_token,
+            };
         } catch (error) {
-            logger.error('Error refreshing token', { error });
-            throw new AppError('Failed to refresh token', 500, 'AUTH_ERROR');
+            logger.error('Error refreshing token', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+            });
+            throw error;
         }
     }
 
     /**
-     * Revoke a refresh token
+     * Revoke refresh token
      */
     async revokeRefreshToken(refreshToken: string): Promise<boolean> {
         try {
-            // Get the token from the database
-            const token = await refreshTokenRepository.getRefreshTokenByToken(refreshToken);
-
-            if (!token) {
-                return false;
-            }
-
-            // Revoke the token
-            await refreshTokenRepository.revokeRefreshToken(token.id);
-            return true;
+            logger.info('Revoking refresh token');
+            const result = await refreshTokenRepository.revokeRefreshToken(refreshToken);
+            return result !== null;
         } catch (error) {
-            logger.error('Error revoking refresh token', { error });
-            throw new AppError('Failed to revoke token', 500, 'AUTH_ERROR');
+            logger.error('Error revoking refresh token', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+            });
+            throw error;
         }
     }
 
     /**
      * Revoke all refresh tokens for a user
      */
-    async revokeAllUserTokens(userId: string): Promise<number> {
+    async revokeAllUserTokens(userId: string): Promise<boolean> {
         try {
-            return await refreshTokenRepository.revokeAllUserRefreshTokens(userId);
+            logger.info('Revoking all refresh tokens for user', { userId });
+            const count = await refreshTokenRepository.revokeAllUserRefreshTokens(userId);
+            return count > 0;
         } catch (error) {
-            logger.error('Error revoking all user tokens', { error, userId });
-            throw new AppError('Failed to revoke tokens', 500, 'AUTH_ERROR');
+            logger.error('Error revoking all user refresh tokens', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                userId,
+            });
+            throw error;
         }
     }
-
-    /**
-     * Get the organization ID for a user
-     * If user has no organization, return a default one
-     */
-    private async getUserOrganizationId(userId: string): Promise<string> {
-        try {
-            const user = await this.userService.getUserById(userId);
-            if (user && user.organization_id) {
-                return user.organization_id;
-            }
-        } catch (error) {
-            logger.warn('Failed to get user organization ID', { userId, error });
-        }
-        
-        // Default organization ID if none found
-        return 'b7cb3474-e7dc-49a6-bf07-e3aa4a6932c0';
-    }
-} 
+}

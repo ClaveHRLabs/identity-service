@@ -19,7 +19,7 @@ export class UserController {
 
             res.status(201).json({
                 success: true,
-                data: user
+                data: user,
             });
         } catch (error) {
             logger.error('Error creating user', { error });
@@ -38,14 +38,14 @@ export class UserController {
             if (!user) {
                 res.status(404).json({
                     success: false,
-                    message: 'User not found'
+                    message: 'User not found',
                 });
                 return;
             }
 
             res.status(200).json({
                 success: true,
-                data: user
+                data: user,
             });
         } catch (error) {
             logger.error('Error getting user', { error, id: req.params.id });
@@ -62,14 +62,14 @@ export class UserController {
             if (!req.user) {
                 res.status(401).json({
                     success: false,
-                    message: 'Authentication required'
+                    message: 'Authentication required',
                 });
                 return;
             }
 
             res.status(200).json({
                 success: true,
-                data: req.user
+                data: req.user,
             });
         } catch (error) {
             logger.error('Error getting current user', { error, userId: req.userId });
@@ -90,14 +90,14 @@ export class UserController {
             if (!user) {
                 res.status(404).json({
                     success: false,
-                    message: 'User not found'
+                    message: 'User not found',
                 });
                 return;
             }
 
             res.status(200).json({
                 success: true,
-                data: user
+                data: user,
             });
         } catch (error) {
             logger.error('Error updating user', { error, id: req.params.id });
@@ -116,14 +116,14 @@ export class UserController {
             if (!deleted) {
                 res.status(404).json({
                     success: false,
-                    message: 'User not found'
+                    message: 'User not found',
                 });
                 return;
             }
 
             res.status(200).json({
                 success: true,
-                message: 'User deleted successfully'
+                message: 'User deleted successfully',
             });
         } catch (error) {
             logger.error('Error deleting user', { error, id: req.params.id });
@@ -148,11 +148,7 @@ export class UserController {
             if (status) filters.status = status as string;
             if (email) filters.email = email as string;
 
-            const result = await this.userService.getUsers(
-                filters,
-                Number(limit),
-                Number(offset)
-            );
+            const result = await this.userService.listUsers(Number(limit), Number(offset), filters.organization_id);
 
             res.status(200).json({
                 success: true,
@@ -160,12 +156,12 @@ export class UserController {
                     items: result.users,
                     total: result.total,
                     limit: Number(limit),
-                    offset: Number(offset)
-                }
+                    offset: Number(offset),
+                },
             });
         } catch (error) {
             logger.error('Error listing users', { error, query: req.query });
             next(error);
         }
     }
-} 
+}

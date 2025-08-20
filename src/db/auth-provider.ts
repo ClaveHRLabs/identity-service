@@ -19,8 +19,8 @@ export async function createAuthProvider(data: CreateAuthProvider): Promise<Auth
             data.access_token || null,
             data.refresh_token || null,
             data.token_expires_at || null,
-            data.metadata || {}
-        ]
+            data.metadata || {},
+        ],
     );
 
     return result.rows[0];
@@ -31,11 +31,11 @@ export async function createAuthProvider(data: CreateAuthProvider): Promise<Auth
  */
 export async function getAuthProviderByUserAndType(
     userId: string,
-    providerType: string
+    providerType: string,
 ): Promise<AuthProvider | null> {
     const result = await db.query(
         'SELECT * FROM auth_providers WHERE user_id = $1 AND provider_type = $2',
-        [userId, providerType]
+        [userId, providerType],
     );
     return result.rows[0] || null;
 }
@@ -45,11 +45,11 @@ export async function getAuthProviderByUserAndType(
  */
 export async function getAuthProviderByEmailAndType(
     email: string,
-    providerType: string
+    providerType: string,
 ): Promise<AuthProvider | null> {
     const result = await db.query(
         'SELECT * FROM auth_providers WHERE email = $1 AND provider_type = $2',
-        [email, providerType]
+        [email, providerType],
     );
     return result.rows[0] || null;
 }
@@ -59,11 +59,11 @@ export async function getAuthProviderByEmailAndType(
  */
 export async function getAuthProviderByProviderUserId(
     providerType: string,
-    providerUserId: string
+    providerUserId: string,
 ): Promise<AuthProvider | null> {
     const result = await db.query(
         'SELECT * FROM auth_providers WHERE provider_type = $1 AND provider_user_id = $2',
-        [providerType, providerUserId]
+        [providerType, providerUserId],
     );
     return result.rows[0] || null;
 }
@@ -72,10 +72,7 @@ export async function getAuthProviderByProviderUserId(
  * Get all auth providers for a user
  */
 export async function getAuthProvidersByUserId(userId: string): Promise<AuthProvider[]> {
-    const result = await db.query(
-        'SELECT * FROM auth_providers WHERE user_id = $1',
-        [userId]
-    );
+    const result = await db.query('SELECT * FROM auth_providers WHERE user_id = $1', [userId]);
     return result.rows;
 }
 
@@ -86,14 +83,14 @@ export async function updateAuthProviderTokens(
     id: string,
     accessToken: string,
     refreshToken: string | null,
-    expiresAt: Date | null
+    expiresAt: Date | null,
 ): Promise<AuthProvider | null> {
     const result = await db.query(
         `UPDATE auth_providers 
          SET access_token = $1, refresh_token = $2, token_expires_at = $3 
          WHERE id = $4 
          RETURNING *`,
-        [accessToken, refreshToken, expiresAt, id]
+        [accessToken, refreshToken, expiresAt, id],
     );
     return result.rows[0] || null;
 }
@@ -102,10 +99,7 @@ export async function updateAuthProviderTokens(
  * Delete auth provider
  */
 export async function deleteAuthProvider(id: string): Promise<boolean> {
-    const result = await db.query(
-        'DELETE FROM auth_providers WHERE id = $1 RETURNING id',
-        [id]
-    );
+    const result = await db.query('DELETE FROM auth_providers WHERE id = $1 RETURNING id', [id]);
     return result.rowCount ? result.rowCount > 0 : false;
 }
 
@@ -113,9 +107,8 @@ export async function deleteAuthProvider(id: string): Promise<boolean> {
  * Delete all auth providers for a user
  */
 export async function deleteAuthProvidersByUserId(userId: string): Promise<number> {
-    const result = await db.query(
-        'DELETE FROM auth_providers WHERE user_id = $1 RETURNING id',
-        [userId]
-    );
+    const result = await db.query('DELETE FROM auth_providers WHERE user_id = $1 RETURNING id', [
+        userId,
+    ]);
     return result.rowCount || 0;
-} 
+}

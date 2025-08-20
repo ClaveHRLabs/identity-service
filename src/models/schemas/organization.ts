@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ORGANIZATION_STATUS, SUBSCRIPTION_TIER, SUBSCRIPTION_STATUS } from '../enums/constants';
+import { SESSION, TOKEN, VALIDATION } from '../../constants/app.constants';
 
 // Common validation patterns and error messages
 const messages = {
@@ -9,7 +10,7 @@ const messages = {
 };
 
 // Color validation regex (hex code)
-const colorRegex = /^#[0-9A-Fa-f]{6}$/;
+const colorRegex = VALIDATION.COLOR_REGEX;
 
 // Organization join settings schema
 export const OrganizationJoinSettingsSchema = z.object({
@@ -27,13 +28,13 @@ export const OrganizationLoginSettingsSchema = z.object({
     allow_oauth_login: z.boolean().default(true),
     allowed_oauth_providers: z.array(z.string()).default(['google', 'microsoft', 'linkedin']),
     require_mfa: z.boolean().default(false),
-    session_timeout_minutes: z.number().positive().default(480),
+    session_timeout_minutes: z.number().positive().default(SESSION.DEFAULT_TIMEOUT_MINUTES),
 });
 
 // Base organization profile schema
 export const OrganizationProfileSchema = z.object({
     id: z.string().uuid(),
-    name: z.string().min(2, 'Name must be at least 2 characters'),
+    name: z.string().min(VALIDATION.MIN_NAME_LENGTH, 'Name must be at least 2 characters'),
     industry: z.string().optional(),
     size: z.string().optional(),
     country: z.string().optional(),
@@ -44,25 +45,31 @@ export const OrganizationProfileSchema = z.object({
     logo_url: z.string().url(messages.invalidUrl).optional(),
     primary_color: z.string().regex(colorRegex, messages.invalidColor).optional(),
     secondary_color: z.string().regex(colorRegex, messages.invalidColor).optional(),
-    status: z.enum([
-        ORGANIZATION_STATUS.ACTIVE,
-        ORGANIZATION_STATUS.INACTIVE,
-        ORGANIZATION_STATUS.SUSPENDED
-    ]).default(ORGANIZATION_STATUS.ACTIVE),
+    status: z
+        .enum([
+            ORGANIZATION_STATUS.ACTIVE,
+            ORGANIZATION_STATUS.INACTIVE,
+            ORGANIZATION_STATUS.SUSPENDED,
+        ])
+        .default(ORGANIZATION_STATUS.ACTIVE),
     timezone: z.string().default('UTC'),
     locale: z.string().default('en-US'),
-    subscription_tier: z.enum([
-        SUBSCRIPTION_TIER.FREE,
-        SUBSCRIPTION_TIER.BASIC,
-        SUBSCRIPTION_TIER.PRO,
-        SUBSCRIPTION_TIER.ENTERPRISE
-    ]).default(SUBSCRIPTION_TIER.BASIC),
-    subscription_status: z.enum([
-        SUBSCRIPTION_STATUS.TRIAL,
-        SUBSCRIPTION_STATUS.ACTIVE,
-        SUBSCRIPTION_STATUS.EXPIRED,
-        SUBSCRIPTION_STATUS.CANCELLED
-    ]).default(SUBSCRIPTION_STATUS.TRIAL),
+    subscription_tier: z
+        .enum([
+            SUBSCRIPTION_TIER.FREE,
+            SUBSCRIPTION_TIER.BASIC,
+            SUBSCRIPTION_TIER.PRO,
+            SUBSCRIPTION_TIER.ENTERPRISE,
+        ])
+        .default(SUBSCRIPTION_TIER.BASIC),
+    subscription_status: z
+        .enum([
+            SUBSCRIPTION_STATUS.TRIAL,
+            SUBSCRIPTION_STATUS.ACTIVE,
+            SUBSCRIPTION_STATUS.EXPIRED,
+            SUBSCRIPTION_STATUS.CANCELLED,
+        ])
+        .default(SUBSCRIPTION_STATUS.TRIAL),
     trial_ends_at: z.date().optional(),
     join_settings: OrganizationJoinSettingsSchema.optional(),
     login_settings: OrganizationLoginSettingsSchema.optional(),
@@ -96,20 +103,21 @@ export const OrganizationSetupCodeSchema = z.object({
 });
 
 // Schema for creating a setup code
-export const CreateSetupCodeSchema = z.object({
-    organization_id: z.string().uuid().optional(),
-    organization_name: z.string().min(2, 'Organization name must be at least 2 characters').optional(),
-    expiration_hours: z.number().positive().default(24),
-    data: z.record(z.any()).optional(),
-    created_by: z.string().optional(),
-})
-    .refine(
-        data => data.organization_id !== undefined || data.organization_name !== undefined,
-        {
-            message: 'Either organization_id or organization_name must be provided',
-            path: ['organization_id']
-        }
-    );
+export const CreateSetupCodeSchema = z
+    .object({
+        organization_id: z.string().uuid().optional(),
+        organization_name: z
+            .string()
+            .min(2, 'Organization name must be at least 2 characters')
+            .optional(),
+        expiration_hours: z.number().positive().default(TOKEN.DEFAULT_EXPIRATION_HOURS),
+        data: z.record(z.any()).optional(),
+        created_by: z.string().optional(),
+    })
+    .refine((data) => data.organization_id !== undefined || data.organization_name !== undefined, {
+        message: 'Either organization_id or organization_name must be provided',
+        path: ['organization_id'],
+    });
 
 // Schema for validating a setup code
 export const ValidateSetupCodeSchema = z.object({
@@ -122,4 +130,4 @@ export type CreateOrganizationProfile = z.infer<typeof CreateOrganizationProfile
 export type UpdateOrganizationProfile = z.infer<typeof UpdateOrganizationProfileSchema>;
 export type OrganizationSetupCode = z.infer<typeof OrganizationSetupCodeSchema>;
 export type CreateSetupCode = z.infer<typeof CreateSetupCodeSchema>;
-export type ValidateSetupCode = z.infer<typeof ValidateSetupCodeSchema>; 
+export type ValidateSetupCode = z.infer<typeof ValidateSetupCodeSchema>;

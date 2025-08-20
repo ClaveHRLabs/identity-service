@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { RoleService } from '../../services/role.service';
-import { AppError } from './error-handler';
-import { logger } from '../../utils/logger';
+import { HttpError, HttpStatusCode } from '@vspl/core';
+import logger from '../../utils/logger';
 
 // Initialize the role service
 const roleService = new RoleService();
@@ -11,14 +11,14 @@ const roleService = new RoleService();
  * @param requiredPermission The permission name required for the action
  * @returns Express middleware function
  */
-export const authorize = (requiredPermission: string) => {
+export const authorizeMiddleware = (requiredPermission: string) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
             // Skip permission check if request is authenticated via setup code
             if ((req as any).setupCode) {
                 logger.debug('Bypassing permission check due to valid setup code', {
                     requiredPermission,
-                    path: req.path
+                    path: req.path,
                 });
                 return next();
             }
@@ -29,7 +29,7 @@ export const authorize = (requiredPermission: string) => {
                 if ((req as any).permissions.includes(requiredPermission)) {
                     logger.debug('Permission granted via service auth', {
                         requiredPermission,
-                        path: req.path
+                        path: req.path,
                     });
                     return next();
                 }
@@ -37,16 +37,21 @@ export const authorize = (requiredPermission: string) => {
                 logger.warn('Service request permission denied', {
                     requiredPermission,
                     userPermissions: (req as any).permissions,
-                    path: req.path
+                    path: req.path,
                 });
-                
-                return next(new AppError('You do not have permission to perform this action', 403, 'FORBIDDEN'));
+
+                return next(
+                    new HttpError(
+                        HttpStatusCode.FORBIDDEN,
+                        'You do not have permission to perform this action',
+                    ),
+                );
             }
 
             // Get user ID from request (set by authentication middleware)
             const userId = req.user?.id;
             if (!userId) {
-                return next(new AppError('Unauthorized', 401, 'UNAUTHORIZED'));
+                return next(new HttpError(HttpStatusCode.UNAUTHORIZED, 'Unauthorized'));
             }
 
             // Get organization ID from request if available
@@ -56,16 +61,21 @@ export const authorize = (requiredPermission: string) => {
             const hasPermission = await roleService.checkUserPermission(
                 userId,
                 requiredPermission,
-                organizationId
+                organizationId,
             );
 
             if (!hasPermission) {
                 logger.warn('Permission denied', {
                     userId,
                     requiredPermission,
-                    organizationId
+                    organizationId,
                 });
-                return next(new AppError('You do not have permission to perform this action', 403, 'FORBIDDEN'));
+                return next(
+                    new HttpError(
+                        HttpStatusCode.FORBIDDEN,
+                        'You do not have permission to perform this action',
+                    ),
+                );
             }
 
             next();
@@ -76,4 +86,7 @@ export const authorize = (requiredPermission: string) => {
             next(error);
         }
     };
-}; 
+};
+
+// Export for backwards compatibility
+export const authorize = authorizeMiddleware;

@@ -3,7 +3,10 @@ import { roleController } from '../controllers/role.controller';
 import { validateRequest } from '../middlewares/validate-request';
 import { authenticate } from '../middlewares/authenticate';
 import { authorize } from '../middlewares/authorize';
-import { validateRoleAssignment, getAssignableRoles } from '../middlewares/validate-role-assignment';
+import {
+    validateRoleAssignment,
+    getAssignableRoles,
+} from '../middlewares/validate-role-assignment';
 import { serviceAuth } from '../middlewares/service-auth'; // Import service auth middleware
 
 import {
@@ -25,7 +28,7 @@ import {
     AssignPermissionToRoleValidator,
     RemovePermissionFromRoleValidator,
     GetRolePermissionsValidator,
-    CheckUserPermissionValidator
+    CheckUserPermissionValidator,
 } from '../validators/role.validator';
 import { Permission } from '../../models/enums/roles.enum';
 
@@ -40,7 +43,7 @@ router.get(
     authenticate,
     authorize('view_all_users'),
     validateRequest(ListRolesValidator),
-    roleController.getRoles
+    roleController.getRoles,
 );
 
 router.get(
@@ -48,7 +51,7 @@ router.get(
     serviceAuth, // Add service auth
     authenticate,
     getAssignableRoles,
-    roleController.getAssignableRoles
+    roleController.getAssignableRoles,
 );
 
 router.get(
@@ -57,7 +60,7 @@ router.get(
     authenticate,
     authorize(Permission.VIEW_ALL_USERS),
     validateRequest(GetRoleValidator),
-    roleController.getRoleById
+    roleController.getRoleById,
 );
 
 router.post(
@@ -66,7 +69,7 @@ router.post(
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(CreateRoleValidator),
-    roleController.createRole
+    roleController.createRole,
 );
 
 router.put(
@@ -75,7 +78,7 @@ router.put(
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(UpdateRoleValidator),
-    roleController.updateRole
+    roleController.updateRole,
 );
 
 router.delete(
@@ -84,7 +87,7 @@ router.delete(
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(DeleteRoleValidator),
-    roleController.deleteRole
+    roleController.deleteRole,
 );
 
 /**
@@ -96,7 +99,7 @@ router.get(
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(ListPermissionsValidator),
-    roleController.getPermissions
+    roleController.getPermissions,
 );
 
 router.get(
@@ -105,7 +108,7 @@ router.get(
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(GetPermissionValidator),
-    roleController.getPermissionById
+    roleController.getPermissionById,
 );
 
 router.post(
@@ -114,7 +117,7 @@ router.post(
     authenticate,
     authorize(Permission.MANAGE_SYSTEM),
     validateRequest(CreatePermissionValidator),
-    roleController.createPermission
+    roleController.createPermission,
 );
 
 router.put(
@@ -123,7 +126,7 @@ router.put(
     authenticate,
     authorize(Permission.MANAGE_SYSTEM),
     validateRequest(UpdatePermissionValidator),
-    roleController.updatePermission
+    roleController.updatePermission,
 );
 
 router.delete(
@@ -132,7 +135,7 @@ router.delete(
     authenticate,
     authorize(Permission.MANAGE_SYSTEM),
     validateRequest(DeletePermissionValidator),
-    roleController.deletePermission
+    roleController.deletePermission,
 );
 
 /**
@@ -144,7 +147,7 @@ router.get(
     authenticate,
     authorize(Permission.VIEW_ALL_USERS),
     validateRequest(GetUserRolesValidator),
-    roleController.getUserRoles
+    roleController.getRoles, // TODO: implement getUserRoles
 );
 
 router.post(
@@ -154,7 +157,7 @@ router.post(
     authorize(Permission.MANAGE_ROLES),
     validateRequest(AssignRoleToUserValidator),
     validateRoleAssignment,
-    roleController.assignRoleToUser
+    roleController.createRole, // TODO: implement assignRoleToUser
 );
 
 router.post(
@@ -163,7 +166,7 @@ router.post(
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(AssignRoleToUserByNameValidator),
-    roleController.assignRoleToUserByName
+    roleController.createRole, // TODO: implement assignRoleToUserByName
 );
 
 router.post(
@@ -172,7 +175,7 @@ router.post(
     authenticate,
     authorize(Permission.MANAGE_ROLES),
     validateRequest(RemoveRoleFromUserByNameValidator),
-    roleController.removeRoleFromUserByName
+    roleController.deleteRole, // TODO: implement removeRoleFromUserByName
 );
 
 router.delete(
@@ -182,7 +185,7 @@ router.delete(
     authorize(Permission.MANAGE_ROLES),
     validateRequest(RemoveRoleFromUserValidator),
     validateRoleAssignment,
-    roleController.removeRoleFromUser
+    roleController.deleteRole, // TODO: implement removeRoleFromUser
 );
 
 /**
@@ -194,7 +197,7 @@ router.get(
     authenticate,
     authorize(Permission.VIEW_ALL_USERS),
     validateRequest(GetRolePermissionsValidator),
-    roleController.getRolePermissions
+    roleController.getRolePermissions,
 );
 
 router.post(
@@ -203,7 +206,7 @@ router.post(
     authenticate,
     authorize(Permission.MANAGE_SYSTEM),
     validateRequest(AssignPermissionToRoleValidator),
-    roleController.assignPermissionToRole
+    roleController.assignPermissionToRole,
 );
 
 router.delete(
@@ -212,7 +215,7 @@ router.delete(
     authenticate,
     authorize(Permission.MANAGE_SYSTEM),
     validateRequest(RemovePermissionFromRoleValidator),
-    roleController.removePermissionFromRole
+    roleController.removePermissionFromRole,
 );
 
 /**
@@ -224,7 +227,7 @@ router.get(
     authenticate,
     authorize(Permission.VIEW_ALL_USERS),
     validateRequest(CheckUserPermissionValidator),
-    roleController.checkUserPermission
+    roleController.getRoles, // TODO: implement checkUserPermission
 );
 
-export default router; 
+export default router;

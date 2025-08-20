@@ -14,7 +14,7 @@ export const ROLES = {
     RECRUITER: UserRole.RECRUITER,
     LEARNING_SPECIALIST: UserRole.LEARNING_SPECIALIST,
     SUCCESSION_PLANNER: UserRole.SUCCESSION_PLANNER,
-    CLAVEHR_OPERATOR: UserRole.CLAVEHR_OPERATOR
+    CLAVEHR_OPERATOR: UserRole.CLAVEHR_OPERATOR,
 };
 
 /**
@@ -36,7 +36,7 @@ export const PERMISSIONS = {
     MANAGE_SUCCESSION: Permission.MANAGE_SUCCESSION,
     MANAGE_LEARNING: Permission.MANAGE_LEARNING,
     MANAGE_RECRUITMENT: Permission.MANAGE_RECRUITMENT,
-    VIEW_ANALYTICS: Permission.VIEW_ANALYTICS
+    VIEW_ANALYTICS: Permission.VIEW_ANALYTICS,
 };
 
 /**
@@ -45,7 +45,7 @@ export const PERMISSIONS = {
 export const ORGANIZATION_STATUS = {
     ACTIVE: 'active',
     INACTIVE: 'inactive',
-    SUSPENDED: 'suspended'
+    SUSPENDED: 'suspended',
 };
 
 /**
@@ -55,7 +55,7 @@ export const SUBSCRIPTION_TIER = {
     FREE: 'free',
     BASIC: 'basic',
     PRO: 'pro',
-    ENTERPRISE: 'enterprise'
+    ENTERPRISE: 'enterprise',
 };
 
 /**
@@ -65,5 +65,5 @@ export const SUBSCRIPTION_STATUS = {
     TRIAL: 'trial',
     ACTIVE: 'active',
     EXPIRED: 'expired',
-    CANCELLED: 'cancelled'
-}; 
+    CANCELLED: 'cancelled',
+};

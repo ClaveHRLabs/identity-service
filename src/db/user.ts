@@ -20,8 +20,8 @@ export async function createUser(data: CreateUser): Promise<User> {
             data.avatar_url || null,
             data.organization_id || null,
             data.metadata || {},
-            data.preferences || {}
-        ]
+            data.preferences || {},
+        ],
     );
 
     return result.rows[0];
@@ -37,21 +37,21 @@ export async function getUserById(id: string): Promise<User | null> {
         if (userResult.rowCount === 0) {
             return null;
         }
-        
+
         const user = userResult.rows[0];
-        
+
         // Then get user roles
         const rolesResult = await db.query(
             `SELECT r.name 
             FROM roles r 
             INNER JOIN user_roles ur ON r.id = ur.role_id 
-            WHERE ur.user_id = $1`, 
-            [id]
+            WHERE ur.user_id = $1`,
+            [id],
         );
-        
+
         // Add roles to user object
-        user.roles = rolesResult.rows.map(row => row.name);
-        
+        user.roles = rolesResult.rows.map((row) => row.name);
+
         return user;
     } catch (error) {
         logger.error('Error fetching user by ID with roles', { error, userId: id });
@@ -68,14 +68,14 @@ export async function getUserById(id: string): Promise<User | null> {
 export async function getEmployeeByUserId(userId: string, organizationId?: string): Promise<any> {
     try {
         // Query to get the employee ID
-        const query = organizationId 
+        const query = organizationId
             ? 'SELECT * FROM employees_derived WHERE user_id = $1 AND organization_id = $2'
             : 'SELECT * FROM employees_derived WHERE user_id = $1';
-            
+
         const params = organizationId ? [userId, organizationId] : [userId];
-        
+
         const result = await db.query(query, params);
-        
+
         if (result.rows.length > 0) {
             return {
                 id: result.rows[0].id,
@@ -90,16 +90,16 @@ export async function getEmployeeByUserId(userId: string, organizationId?: strin
                 city: result.rows[0].city,
                 state: result.rows[0].state,
                 country: result.rows[0].country,
-                zip: result.rows[0].zip
-            }
+                zip: result.rows[0].zip,
+            };
         }
-        
+
         return undefined;
     } catch (error) {
         logger.error('Error getting employee ID by user ID', {
             error: error instanceof Error ? error.message : 'Unknown error',
             userId,
-            organizationId
+            organizationId,
         });
         return undefined;
     }
@@ -115,21 +115,21 @@ export async function getUserByEmail(email: string): Promise<User | null> {
         if (userResult.rowCount === 0) {
             return null;
         }
-        
+
         const user = userResult.rows[0];
-        
+
         // Then get user roles
         const rolesResult = await db.query(
             `SELECT r.name 
             FROM roles r 
             INNER JOIN user_roles ur ON r.id = ur.role_id 
-            WHERE ur.user_id = $1`, 
-            [user.id]
+            WHERE ur.user_id = $1`,
+            [user.id],
         );
-        
+
         // Add roles to user object
-        user.roles = rolesResult.rows.map(row => row.name);
-        
+        user.roles = rolesResult.rows.map((row) => row.name);
+
         return user;
     } catch (error) {
         logger.error('Error fetching user by email with roles', { error, email });
@@ -226,7 +226,7 @@ export async function deleteUser(id: string): Promise<boolean> {
 export async function getUsers(
     filters: { organization_id?: string; status?: string; email?: string } = {},
     limit = 100,
-    offset = 0
+    offset = 0,
 ): Promise<User[]> {
     try {
         let query = 'SELECT * FROM users WHERE 1=1';
@@ -254,18 +254,18 @@ export async function getUsers(
         values.push(limit, offset);
 
         const result = await db.query(query, values);
-        
+
         // Get roles for all users
         const users = result.rows;
-        
+
         // If no users, return empty array
         if (users.length === 0) {
             return [];
         }
-        
+
         // Get all user IDs
-        const userIds = users.map(user => user.id);
-        
+        const userIds = users.map((user) => user.id);
+
         // Query for all roles for these users in one query
         const rolesQuery = `
             SELECT ur.user_id, r.name 
@@ -273,24 +273,24 @@ export async function getUsers(
             INNER JOIN user_roles ur ON r.id = ur.role_id 
             WHERE ur.user_id = ANY($1::uuid[])
         `;
-        
+
         const rolesResult = await db.query(rolesQuery, [userIds]);
-        
+
         // Create a map of user ID to roles
         const userRolesMap = new Map();
-        
-        rolesResult.rows.forEach(row => {
+
+        rolesResult.rows.forEach((row) => {
             if (!userRolesMap.has(row.user_id)) {
                 userRolesMap.set(row.user_id, []);
             }
             userRolesMap.get(row.user_id).push(row.name);
         });
-        
+
         // Add roles to each user
-        users.forEach(user => {
+        users.forEach((user) => {
             user.roles = userRolesMap.get(user.id) || [];
         });
-        
+
         return users;
     } catch (error) {
         logger.error('Error fetching users with roles', { error, filters });
@@ -302,7 +302,7 @@ export async function getUsers(
  * Count users with the same filters
  */
 export async function countUsers(
-    filters: { organization_id?: string; status?: string; email?: string } = {}
+    filters: { organization_id?: string; status?: string; email?: string } = {},
 ): Promise<number> {
     let query = 'SELECT COUNT(*) FROM users WHERE 1=1';
     const values: any[] = [];
@@ -334,7 +334,7 @@ export async function countUsers(
 export async function setEmailVerified(id: string, verified: boolean = true): Promise<User | null> {
     const result = await db.query(
         'UPDATE users SET email_verified = $1 WHERE id = $2 RETURNING *',
-        [verified, id]
+        [verified, id],
     );
     return result.rows[0] || null;
 }
@@ -344,9 +344,9 @@ export async function setEmailVerified(id: string, verified: boolean = true): Pr
  */
 export async function updateLastLogin(id: string): Promise<User | null> {
     const now = new Date();
-    const result = await db.query(
-        'UPDATE users SET last_login_at = $1 WHERE id = $2 RETURNING *',
-        [now, id]
-    );
+    const result = await db.query('UPDATE users SET last_login_at = $1 WHERE id = $2 RETURNING *', [
+        now,
+        id,
+    ]);
     return result.rows[0] || null;
-} 
+}

@@ -20,7 +20,9 @@ export const addSetupCodeHeader = (req: Request, res: Response, next: NextFuncti
                     if (parsedBody.success && parsedBody.data && parsedBody.data.organization) {
                         // Add the setup code to the response header
                         res.setHeader('x-setup-code', req.body.code);
-                        logger.debug('Added setup code to response header', { code: req.body.code });
+                        logger.debug('Added setup code to response header', {
+                            code: req.body.code,
+                        });
                     }
                 }
             } catch (error) {
@@ -49,4 +51,4 @@ export const extractSetupCode = (req: Request, res: Response, next: NextFunction
     }
 
     next();
-}; 
+};

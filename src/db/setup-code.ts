@@ -1,8 +1,5 @@
 import db from './db';
-import {
-    OrganizationSetupCode,
-    CreateSetupCode
-} from '../models/schemas/organization';
+import { OrganizationSetupCode, CreateSetupCode } from '../models/schemas/organization';
 import { generateClaveSetupCode } from '../utils/code-generator';
 
 /**
@@ -23,7 +20,7 @@ export async function createSetupCode(data: CreateSetupCode): Promise<Organizati
       organization_id, code, data, expires_at, created_by_admin
     ) VALUES ($1, $2, $3, $4, $5) 
     RETURNING *`,
-        [organization_id, code, data.data || {}, expires_at, created_by]
+        [organization_id, code, data.data || {}, expires_at, created_by],
     );
 
     return result.rows[0];
@@ -33,10 +30,7 @@ export async function createSetupCode(data: CreateSetupCode): Promise<Organizati
  * Get setup code by code string
  */
 export async function getSetupCodeByCode(code: string): Promise<OrganizationSetupCode | null> {
-    const result = await db.query(
-        'SELECT * FROM organization_setup_codes WHERE code = $1',
-        [code]
-    );
+    const result = await db.query('SELECT * FROM organization_setup_codes WHERE code = $1', [code]);
 
     return result.rows[0] || null;
 }
@@ -46,7 +40,7 @@ export async function getSetupCodeByCode(code: string): Promise<OrganizationSetu
  */
 export async function getSetupCodesByOrganization(
     organizationId: string,
-    includeUsed = false
+    includeUsed = false,
 ): Promise<OrganizationSetupCode[]> {
     let query = 'SELECT * FROM organization_setup_codes WHERE organization_id = $1';
     const params = [organizationId];
@@ -72,7 +66,7 @@ export async function markSetupCodeAsUsed(code: string): Promise<OrganizationSet
      SET used = true, used_at = $1 
      WHERE code = $2 AND used = false 
      RETURNING *`,
-        [now, code]
+        [now, code],
     );
 
     return result.rows[0] || null;
@@ -84,7 +78,7 @@ export async function markSetupCodeAsUsed(code: string): Promise<OrganizationSet
 export async function deleteSetupCode(id: string): Promise<boolean> {
     const result = await db.query(
         'DELETE FROM organization_setup_codes WHERE id = $1 RETURNING id',
-        [id]
+        [id],
     );
 
     return result.rowCount ? result.rowCount > 0 : false;
@@ -100,7 +94,7 @@ export async function cleanupExpiredSetupCodes(): Promise<number> {
         `DELETE FROM organization_setup_codes 
      WHERE expires_at < $1 
      RETURNING id`,
-        [now]
+        [now],
     );
 
     return result.rowCount || 0;
@@ -108,7 +102,7 @@ export async function cleanupExpiredSetupCodes(): Promise<number> {
 
 /**
  * Validate a setup code
- * 
+ *
  * This checks if the code:
  * 1. Exists
  * 2. Is not expired
@@ -131,4 +125,4 @@ export async function validateSetupCode(code: string): Promise<{
     }
 
     return { valid: true, setupCode };
-} 
+}

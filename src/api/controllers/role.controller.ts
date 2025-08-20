@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { RoleService } from '../../services/role.service';
-import { AppError } from '../middlewares/error-handler';
+import { HttpError, HttpStatusCode } from '@vspl/core';
+import { PAGINATION } from '../../constants/app.constants';
 
 const roleService = new RoleService();
 
@@ -12,8 +13,8 @@ export const roleController = {
     // Get all roles with pagination
     async getRoles(req: Request, res: Response, next: NextFunction) {
         try {
-            const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-            const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+            const limit = req.query.limit ? parseInt(req.query.limit as string) : PAGINATION.MAX_LIMIT;
+            const offset = req.query.offset ? parseInt(req.query.offset as string) : PAGINATION.DEFAULT_OFFSET;
 
             const { roles, total } = await roleService.getRoles(limit, offset);
 
@@ -23,8 +24,8 @@ export const roleController = {
                     total,
                     limit,
                     offset,
-                    hasMore: offset + roles.length < total
-                }
+                    hasMore: offset + roles.length < total,
+                },
             });
         } catch (error) {
             next(error);
@@ -40,14 +41,27 @@ export const roleController = {
             }
 
             // Get the full role objects
-            const rolePromises = req.assignableRoles.map(roleName =>
-                roleService.getRoleByName(roleName)
+            const rolePromises = req.assignableRoles.map((roleName) =>
+                roleService.getRoleByName(roleName),
             );
 
-            const roles = (await Promise.all(rolePromises)).filter(role => role !== null);
+            const roles = (await Promise.all(rolePromises)).filter((role) => role !== null);
 
             return res.json({
-                data: roles
+                data: roles,
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    // Create a new role
+    async createRole(req: Request, res: Response, next: NextFunction) {
+        try {
+            const newRole = await roleService.createRole(req.body);
+            return res.status(HttpStatusCode.CREATED).json({
+                message: 'Role created successfully',
+                data: newRole,
             });
         } catch (error) {
             next(error);
@@ -61,56 +75,49 @@ export const roleController = {
             const role = await roleService.getRoleById(id);
 
             if (!role) {
-                return next(new AppError('Role not found', 404, 'NOT_FOUND'));
+                throw new HttpError(HttpStatusCode.NOT_FOUND, 'Role not found');
             }
 
-            return res.json({ data: role });
+            return res.json({
+                data: role,
+            });
         } catch (error) {
             next(error);
         }
     },
 
-    // Create a new role
-    async createRole(req: Request, res: Response, next: NextFunction) {
-        try {
-            const roleData = req.body;
-            const newRole = await roleService.createRole(roleData);
-
-            return res.status(201).json({ data: newRole });
-        } catch (error) {
-            next(error);
-        }
-    },
-
-    // Update a role
+    // Update role
     async updateRole(req: Request, res: Response, next: NextFunction) {
         try {
             const { id } = req.params;
-            const updateData = req.body;
+            const role = await roleService.updateRole(id, req.body);
 
-            const updatedRole = await roleService.updateRole(id, updateData);
-
-            if (!updatedRole) {
-                return next(new AppError('Role not found', 404, 'NOT_FOUND'));
+            if (!role) {
+                throw new HttpError(HttpStatusCode.NOT_FOUND, 'Role not found');
             }
 
-            return res.json({ data: updatedRole });
+            return res.json({
+                message: 'Role updated successfully',
+                data: role,
+            });
         } catch (error) {
             next(error);
         }
     },
 
-    // Delete a role
+    // Delete role
     async deleteRole(req: Request, res: Response, next: NextFunction) {
         try {
             const { id } = req.params;
             const deleted = await roleService.deleteRole(id);
 
             if (!deleted) {
-                return next(new AppError('Role not found', 404, 'NOT_FOUND'));
+                throw new HttpError(HttpStatusCode.NOT_FOUND, 'Role not found');
             }
 
-            return res.status(204).end();
+            return res.json({
+                message: 'Role deleted successfully',
+            });
         } catch (error) {
             next(error);
         }
@@ -123,8 +130,8 @@ export const roleController = {
     // Get all permissions with pagination
     async getPermissions(req: Request, res: Response, next: NextFunction) {
         try {
-            const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
-            const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+            const limit = req.query.limit ? parseInt(req.query.limit as string) : PAGINATION.MAX_LIMIT;
+            const offset = req.query.offset ? parseInt(req.query.offset as string) : PAGINATION.DEFAULT_OFFSET;
 
             const { permissions, total } = await roleService.getPermissions(limit, offset);
 
@@ -134,8 +141,21 @@ export const roleController = {
                     total,
                     limit,
                     offset,
-                    hasMore: offset + permissions.length < total
-                }
+                    hasMore: offset + permissions.length < total,
+                },
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    // Create a new permission
+    async createPermission(req: Request, res: Response, next: NextFunction) {
+        try {
+            const newPermission = await roleService.createPermission(req.body);
+            return res.status(HttpStatusCode.CREATED).json({
+                message: 'Permission created successfully',
+                data: newPermission,
             });
         } catch (error) {
             next(error);
@@ -149,166 +169,84 @@ export const roleController = {
             const permission = await roleService.getPermissionById(id);
 
             if (!permission) {
-                return next(new AppError('Permission not found', 404, 'NOT_FOUND'));
+                throw new HttpError(HttpStatusCode.NOT_FOUND, 'Permission not found');
             }
 
-            return res.json({ data: permission });
+            return res.json({
+                data: permission,
+            });
         } catch (error) {
             next(error);
         }
     },
 
-    // Create a new permission
-    async createPermission(req: Request, res: Response, next: NextFunction) {
-        try {
-            const permissionData = req.body;
-            const newPermission = await roleService.createPermission(permissionData);
-
-            return res.status(201).json({ data: newPermission });
-        } catch (error) {
-            next(error);
-        }
-    },
-
-    // Update a permission
+    // Update permission
     async updatePermission(req: Request, res: Response, next: NextFunction) {
         try {
             const { id } = req.params;
-            const updateData = req.body;
+            const permission = await roleService.updatePermission(id, req.body);
 
-            const updatedPermission = await roleService.updatePermission(id, updateData);
-
-            if (!updatedPermission) {
-                return next(new AppError('Permission not found', 404, 'NOT_FOUND'));
+            if (!permission) {
+                throw new HttpError(HttpStatusCode.NOT_FOUND, 'Permission not found');
             }
 
-            return res.json({ data: updatedPermission });
+            return res.json({
+                message: 'Permission updated successfully',
+                data: permission,
+            });
         } catch (error) {
             next(error);
         }
     },
 
-    // Delete a permission
+    // Delete permission
     async deletePermission(req: Request, res: Response, next: NextFunction) {
         try {
             const { id } = req.params;
             const deleted = await roleService.deletePermission(id);
 
             if (!deleted) {
-                return next(new AppError('Permission not found', 404, 'NOT_FOUND'));
+                throw new HttpError(HttpStatusCode.NOT_FOUND, 'Permission not found');
             }
 
-            return res.status(204).end();
+            return res.json({
+                message: 'Permission deleted successfully',
+            });
         } catch (error) {
             next(error);
         }
     },
 
     /**
-     * User Role Controllers
+     * Role-Permission Assignment Controllers
      */
-
-    // Get user's roles
-    async getUserRoles(req: Request, res: Response, next: NextFunction) {
-        try {
-            const { userId } = req.params;
-            const organizationId = req.query.organizationId as string | undefined;
-
-            const userRoles = await roleService.getUserRoles(userId, organizationId);
-
-            return res.json({ data: userRoles });
-        } catch (error) {
-            next(error);
-        }
-    },
-
-    // Assign role to user
-    async assignRoleToUser(req: Request, res: Response, next: NextFunction) {
-        try {
-            const assignData = req.body;
-            const userRole = await roleService.assignRoleToUser(assignData);
-
-            return res.status(201).json({ data: userRole });
-        } catch (error) {
-            next(error);
-        }
-    },
-
-    // Assign role to user by name
-    async assignRoleToUserByName(req: Request, res: Response, next: NextFunction) {
-        try {
-            const { userId, roleName, organizationId } = req.body;
-            const userRole = await roleService.assignRoleToUserByName(userId, roleName, organizationId);
-
-            if (!userRole) {
-                return next(new AppError('Failed to assign role', 400, 'BAD_REQUEST'));
-            }
-
-            return res.status(201).json({ data: userRole });
-        } catch (error) {
-            next(error);
-        }
-    },
-
-    // Remove role from user
-    async removeRoleFromUser(req: Request, res: Response, next: NextFunction) {
-        try {
-            const { userId, roleId } = req.params;
-            const organizationId = req.query.organizationId as string | undefined;
-
-            const removed = await roleService.removeRoleFromUser(userId, roleId, organizationId);
-
-            if (!removed) {
-                return next(new AppError('Role assignment not found', 404, 'NOT_FOUND'));
-            }
-
-            return res.status(204).end();
-        } catch (error) {
-            next(error);
-        }
-    },
-
-    // Remove role from user by name
-    async removeRoleFromUserByName(req: Request, res: Response, next: NextFunction) {
-        try {
-            const { userId } = req.params;
-            const { roleName, organizationId } = req.body;
-
-            const removed = await roleService.removeRoleFromUserByName(userId, roleName, organizationId);
-
-            if (!removed) {
-                return next(new AppError('Role assignment not found', 404, 'NOT_FOUND'));
-            }
-
-            return res.status(204).end();
-        } catch (error) {
-            next(error);
-        }
-    },
-
-    /**
-     * Role Permission Controllers
-     */
-
-    // Get role permissions
-    async getRolePermissions(req: Request, res: Response, next: NextFunction) {
-        try {
-            const { roleId } = req.params;
-            const permissions = await roleService.getRolePermissions(roleId);
-
-            return res.json({ data: permissions });
-        } catch (error) {
-            next(error);
-        }
-    },
 
     // Assign permission to role
     async assignPermissionToRole(req: Request, res: Response, next: NextFunction) {
         try {
-            const assignData = req.body;
-            const rolePermission = await roleService.assignPermissionToRole(assignData);
+            const { roleId, permissionId } = req.params;
 
-            return res.status(201).json({ data: rolePermission });
+            // Check if role and permission exist
+            const role = await roleService.getRoleById(roleId);
+            if (!role) {
+                throw new HttpError(HttpStatusCode.NOT_FOUND, 'Role not found');
+            }
+
+            const permission = await roleService.getPermissionById(permissionId);
+            if (!permission) {
+                throw new HttpError(HttpStatusCode.NOT_FOUND, 'Permission not found');
+            }
+
+            // Assign permission to role
+            const assignment = await roleService.assignPermissionToRole({
+                role_id: roleId,
+                permission_id: permissionId,
+            });
+
+            return res.status(HttpStatusCode.OK).json({
+                message: 'Permission assigned to role successfully',
+                data: assignment,
+            });
         } catch (error) {
             next(error);
         }
@@ -318,37 +256,44 @@ export const roleController = {
     async removePermissionFromRole(req: Request, res: Response, next: NextFunction) {
         try {
             const { roleId, permissionId } = req.params;
+
+            // Remove permission from role
             const removed = await roleService.removePermissionFromRole(roleId, permissionId);
 
             if (!removed) {
-                return next(new AppError('Permission assignment not found', 404, 'NOT_FOUND'));
+                throw new HttpError(
+                    HttpStatusCode.NOT_FOUND,
+                    'Role-permission assignment not found',
+                );
             }
 
-            return res.status(204).end();
+            return res.json({
+                message: 'Permission removed from role successfully',
+            });
         } catch (error) {
             next(error);
         }
     },
 
-    /**
-     * Permission Check Controller
-     */
-
-    // Check if user has permission
-    async checkUserPermission(req: Request, res: Response, next: NextFunction) {
+    // Get role permissions
+    async getRolePermissions(req: Request, res: Response, next: NextFunction) {
         try {
-            const { userId, permissionName } = req.params;
-            const organizationId = req.query.organizationId as string | undefined;
+            const { roleId } = req.params;
 
-            const hasPermission = await roleService.checkUserPermission(
-                userId,
-                permissionName,
-                organizationId
-            );
+            // Check if role exists
+            const role = await roleService.getRoleById(roleId);
+            if (!role) {
+                throw new HttpError(HttpStatusCode.NOT_FOUND, 'Role not found');
+            }
 
-            return res.json({ data: { hasPermission } });
+            // Get permissions for role
+            const permissions = await roleService.getRolePermissions(roleId);
+
+            return res.json({
+                data: permissions,
+            });
         } catch (error) {
             next(error);
         }
-    }
-}; 
+    },
+};

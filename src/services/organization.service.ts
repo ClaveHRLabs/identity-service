@@ -1,4 +1,4 @@
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 import * as organizationRepository from '../db/organization';
 import * as setupCodeRepository from '../db/setup-code';
 import {
@@ -6,7 +6,7 @@ import {
     CreateOrganizationProfile,
     UpdateOrganizationProfile
 } from '../models/schemas/organization';
-import { AppError } from '../api/middlewares/error-handler';
+import { HttpError, HttpStatusCode, CatchErrors, Measure } from '@vspl/core';
 
 export class OrganizationService {
     /**
@@ -41,6 +41,8 @@ export class OrganizationService {
     /**
      * Create a new organization profile
      */
+    @CatchErrors()
+    @Measure()
     async createOrganizationProfile(
         profileData: CreateOrganizationProfile,
         setupCode?: string
@@ -101,7 +103,7 @@ export class OrganizationService {
                 const isValid = await this.validateSetupCodeForOrganization(setupCode, id);
                 if (!isValid) {
                     logger.warn('Invalid setup code for organization update', { id, setupCode });
-                    throw new AppError('Invalid setup code for this organization', 403, 'FORBIDDEN');
+                    throw new HttpError(HttpStatusCode.FORBIDDEN, 'Invalid setup code for this organization');
                 }
             }
 
@@ -148,7 +150,7 @@ export class OrganizationService {
                 const isValid = await this.validateSetupCodeForOrganization(setupCode, id);
                 if (!isValid) {
                     logger.warn('Invalid setup code for organization deletion', { id, setupCode });
-                    throw new AppError('Invalid setup code for this organization', 403, 'FORBIDDEN');
+                    throw new HttpError(HttpStatusCode.FORBIDDEN, 'Invalid setup code for this organization');
                 }
             }
 

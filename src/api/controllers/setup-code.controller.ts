@@ -13,7 +13,11 @@ export class SetupCodeController {
      * Create a new organization setup code
      * If organization_id is not provided, looks up or creates an organization by name
      */
-    async createSetupCode(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+    async createSetupCode(
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ): Promise<Response | void> {
         try {
             const setupCodeData = req.body;
 
@@ -30,14 +34,14 @@ export class SetupCodeController {
             logger.info('Creating setup code', {
                 organizationId,
                 organizationName,
-                user: req.user?.email || 'unknown'
+                user: req.user?.email || 'unknown',
             });
 
             // Validate that at least one of organization_id or organization_name is provided
             if (!organizationId && !organizationName) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Either organization_id or organization_name must be provided'
+                    message: 'Either organization_id or organization_name must be provided',
                 });
             }
 
@@ -45,7 +49,7 @@ export class SetupCodeController {
 
             res.status(201).json({
                 success: true,
-                data: setupCode
+                data: setupCode,
             });
         } catch (error) {
             logger.error('Error creating setup code', { error });
@@ -56,24 +60,28 @@ export class SetupCodeController {
     /**
      * Get all setup codes for an organization
      */
-    async getOrganizationSetupCodes(req: Request, res: Response, next: NextFunction): Promise<void> {
+    async getOrganizationSetupCodes(
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ): Promise<void> {
         try {
             const { organizationId } = req.params;
             const { includeUsed } = req.query;
 
             const setupCodes = await this.setupCodeService.getSetupCodesByOrganization(
                 organizationId,
-                includeUsed === 'true'
+                includeUsed === 'true',
             );
 
             res.status(200).json({
                 success: true,
-                data: setupCodes
+                data: setupCodes,
             });
         } catch (error) {
             logger.error('Error getting organization setup codes', {
                 error,
-                organizationId: req.params.organizationId
+                organizationId: req.params.organizationId,
             });
             next(error);
         }
@@ -91,7 +99,7 @@ export class SetupCodeController {
             if (!result.success) {
                 res.status(400).json({
                     success: false,
-                    message: result.message || 'Invalid setup code'
+                    message: result.message || 'Invalid setup code',
                 });
                 return;
             }
@@ -99,8 +107,8 @@ export class SetupCodeController {
             res.status(200).json({
                 success: true,
                 data: {
-                    organization: result.organization
-                }
+                    organization: result.organization,
+                },
             });
         } catch (error) {
             logger.error('Error validating setup code', { error, code: req.body.code });
@@ -119,18 +127,18 @@ export class SetupCodeController {
             if (!deleted) {
                 res.status(404).json({
                     success: false,
-                    message: 'Setup code not found'
+                    message: 'Setup code not found',
                 });
                 return;
             }
 
             res.status(200).json({
                 success: true,
-                message: 'Setup code deleted successfully'
+                message: 'Setup code deleted successfully',
             });
         } catch (error) {
             logger.error('Error deleting setup code', { error, id: req.params.id });
             next(error);
         }
     }
-} 
+}

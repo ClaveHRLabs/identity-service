@@ -10,7 +10,7 @@ import {
     VerifyMagicLinkValidator,
     RefreshTokenValidator,
     LogoutValidator,
-    InitiateOAuthValidator
+    InitiateOAuthValidator,
 } from '../validators/user.validator';
 
 export const createAuthRoutes = (authController: AuthController) => {
@@ -20,67 +20,64 @@ export const createAuthRoutes = (authController: AuthController) => {
     router.get(
         '/google/authorize',
         validateRequest(InitiateOAuthValidator),
-        authController.initiateGoogleAuth.bind(authController)
+        authController.initiateGoogleAuth.bind(authController),
     );
 
     router.get(
         '/microsoft/authorize',
         validateRequest(InitiateOAuthValidator),
-        authController.initiateMicrosoftAuth.bind(authController)
+        authController.initiateMicrosoftAuth.bind(authController),
     );
 
     router.get(
         '/linkedin/authorize',
         validateRequest(InitiateOAuthValidator),
-        authController.initiateLinkedInAuth.bind(authController)
+        authController.initiateLinkedInAuth.bind(authController),
     );
 
     // Google OAuth authentication
     router.post(
         '/google',
         validateRequest(GoogleAuthValidator),
-        authController.googleAuth.bind(authController)
+        authController.googleAuth.bind(authController),
     );
 
     // Microsoft OAuth authentication
     router.post(
         '/microsoft',
         validateRequest(MicrosoftAuthValidator),
-        authController.microsoftAuth.bind(authController)
+        authController.microsoftAuth.bind(authController),
     );
 
     // LinkedIn OAuth authentication
     router.post(
         '/linkedin',
         validateRequest(LinkedInAuthValidator),
-        authController.linkedInAuth.bind(authController)
+        authController.linkedInAuth.bind(authController),
     );
 
     // LinkedIn debug config endpoint (development only)
-    router.get(
-        '/linkedin/debug-config',
-        authController.debugLinkedInConfig.bind(authController)
-    );
+    router.get('/linkedin/debug-config', authController.debugLinkedInConfig.bind(authController));
 
     // Send magic link for email authentication
     router.post(
         '/magic-link',
         validateRequest(SendMagicLinkValidator),
-        authController.sendMagicLink.bind(authController)
+        authController.sendMagicLink.bind(authController),
     );
 
     // Verify magic link token
     router.post(
         '/verify-magic-link',
         validateRequest(VerifyMagicLinkValidator),
-        authController.verifyMagicLink.bind(authController)
+        authController.verifyMagicLink.bind(authController),
     );
 
     // Refresh access token
     router.post(
         '/refresh-token',
         validateRequest(RefreshTokenValidator),
-        authController.refreshToken.bind(authController)
+        authController.refreshToken.bind(authController),
     );
 
     // Logout (revoke refresh token)
@@ -88,8 +85,8 @@ export const createAuthRoutes = (authController: AuthController) => {
         '/logout',
         authenticate, // Optional - if not authenticated, uses token from body
         validateRequest(LogoutValidator),
-        authController.logout.bind(authController)
+        authController.logout.bind(authController),
     );
 
     return router;
-}; 
+};

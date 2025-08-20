@@ -1,41 +1,31 @@
-import { app, dbPool } from './dependencies';
-import { logger } from './utils/logger';
+import { app, setupShutdown } from './dependencies';
+import { PORT, IS_DEVELOPMENT, SERVICE_NAME } from './config/config';
+import logger from './utils/logger';
 
 // Start the server
-// Use a different port for development mode if the main port is taken
-const PORT = process.env.PORT || 5022;
 const server = app.listen(PORT, () => {
-    logger.info(`Identity Service running on port ${PORT}`);
-    logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info(`${SERVICE_NAME} running on port ${PORT}`, {
+        port: PORT,
+        environment: IS_DEVELOPMENT ? 'development' : 'production',
+    });
 });
 
-// Handle graceful shutdown
-const shutdown = () => {
-    logger.info('Received shutdown signal, closing server and database connections...');
+// Setup graceful shutdown handling
+setupShutdown(server);
 
-    server.close(async () => {
-        logger.info('HTTP server closed');
-        try {
-            await dbPool.close();
-            logger.info('Database connections closed');
-            process.exit(0);
-        } catch (err) {
-            logger.error('Error during graceful shutdown:', err);
-            process.exit(1);
-        }
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Rejection:', {
+        promise,
+        reason: reason instanceof Error ? reason.message : reason,
     });
+});
 
-    // Force shutdown after 10 seconds
-    setTimeout(() => {
-        logger.error('Forced shutdown after timeout');
-        process.exit(1);
-    }, 10000);
-};
-
-// Handle different termination signals
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
-process.on('uncaughtException', (err) => {
-    logger.error('Uncaught exception:', err);
-    shutdown();
-}); 
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+    logger.error('Uncaught Exception:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+    });
+    process.exit(1);
+});

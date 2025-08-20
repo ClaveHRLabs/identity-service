@@ -12,7 +12,7 @@ export enum UserRole {
     RECRUITER = 'recruiter',
     LEARNING_SPECIALIST = 'learning_specialist',
     SUCCESSION_PLANNER = 'succession_planner',
-    CLAVEHR_OPERATOR = 'clavehr_operator'
+    CLAVEHR_OPERATOR = 'clavehr_operator',
 }
 
 /**
@@ -34,5 +34,5 @@ export enum Permission {
     MANAGE_SUCCESSION = 'manage_succession',
     MANAGE_LEARNING = 'manage_learning',
     MANAGE_RECRUITMENT = 'manage_recruitment',
-    VIEW_ANALYTICS = 'view_analytics'
-} 
+    VIEW_ANALYTICS = 'view_analytics',
+}

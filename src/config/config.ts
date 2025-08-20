@@ -1,43 +1,20 @@
+import { AppConfig, AppConfigSchema, loadConfig } from '@vspl/core';
 import { z } from 'zod';
-import 'dotenv/config';
-import { logger } from '../utils/logger';
 
-// Import only what's needed from dotenv
-import * as dotenv from 'dotenv';
-dotenv.config();
-
-// Define environment schema with Zod
-const envSchema = z.object({
-    // Server Configuration
-    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-    PORT: z.string().transform(Number).default('3001'),
-
-    // Database Configuration
-    DB_HOST: z.string().default('localhost'),
-    DB_PORT: z.string().transform(Number).default('5432'),
-    DB_NAME: z.string(),
-    DB_USER: z.string(),
-    DB_PASS: z.string(),
-
+// Create Zod schema for identity service specific configuration
+const IdentityServiceConfigSchema = AppConfigSchema.extend({
     // JWT Configuration
     JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
     JWT_EXPIRATION: z.string().default('1h'),
     JWT_REFRESH_SECRET: z.string().min(1, 'JWT_REFRESH_SECRET is required'),
     JWT_REFRESH_EXPIRATION: z.string().default('7d'),
 
-    // Logging Configuration
-    LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
-
     // App Configuration
-    SERVICE_NAME: z.string().default('identity-service'),
     API_PREFIX: z.string().default('/api'),
     FRONTEND_URL: z.string().url().default('http://localhost:3000'),
 
     // Admin Configuration
     ADMIN_KEY: z.string().min(1, 'ADMIN_KEY is required'),
-    
-    // Service-to-service Authentication
-    SERVICE_API_KEY: z.string().optional().default(''),
 
     // OAuth Configuration
     GOOGLE_CLIENT_ID: z.string().optional(),
@@ -51,67 +28,161 @@ const envSchema = z.object({
     NOTIFICATION_SERVICE_URL: z.string().url().default('http://localhost:5010'),
 
     // Error Handling
-    SHOW_ERROR_STACK: z.string().transform(val => val === 'true').default('false'),
-    SHOW_ERROR_DETAILS: z.string().transform(val => val === 'true').default('false')
+    SHOW_ERROR_STACK: z
+        .string()
+        .transform((val) => val === 'true')
+        .default('false'),
+    SHOW_ERROR_DETAILS: z
+        .string()
+        .transform((val) => val === 'true')
+        .default('false'),
+
+    // Service-specific defaults for core fields
+    SERVICE_NAME: z.string().default('identity-service'),
+    PORT: z.string().transform((val) => parseInt(val, 10)).default('5002'),
 });
 
-// Parse environment variables or throw error
-try {
-    envSchema.parse(process.env);
-} catch (error) {
-    if (error instanceof z.ZodError) {
-        console.error("❌ Invalid environment variables:", error.format());
-        process.exit(1);
+// Service-specific configuration type that extends the base config
+export interface IdentityConfig extends AppConfig {
+    // JWT Configuration
+    JWT_SECRET: string;
+    JWT_EXPIRATION: string;
+    JWT_REFRESH_SECRET: string;
+    JWT_REFRESH_EXPIRATION: string;
+
+    // App Configuration
+    API_PREFIX: string;
+    FRONTEND_URL: string;
+
+    // Admin Configuration
+    ADMIN_KEY: string;
+
+    // OAuth Configuration
+    GOOGLE_CLIENT_ID?: string;
+    GOOGLE_CLIENT_SECRET?: string;
+    MICROSOFT_CLIENT_ID?: string;
+    MICROSOFT_CLIENT_SECRET?: string;
+    LINKEDIN_CLIENT_ID?: string;
+    LINKEDIN_CLIENT_SECRET?: string;
+
+    // Service URLs
+    NOTIFICATION_SERVICE_URL: string;
+
+    // Error Handling
+    SHOW_ERROR_STACK: boolean;
+    SHOW_ERROR_DETAILS: boolean;
+
+    // Computed properties
+    IS_PRODUCTION: boolean;
+    IS_DEVELOPMENT: boolean;
+    IS_TEST: boolean;
+}
+
+// Load configuration using the async loadConfig with options
+const loadConfigOptions = {
+    env: process.env,
+    useAwsSecrets: false,
+    useLocalEnvOverride: process.env.USE_LOCAL_ENV_OVERRIDE === 'true',
+    loadDotenv: true,
+    dotenvPath: '../docker/.env',
+} as const;
+
+// Create async config loader function with safe parsing
+async function createConfig(): Promise<IdentityConfig> {
+    try {
+        // Load environment variables without schema validation
+        const env = await loadConfig(loadConfigOptions);
+
+        // Apply IdentityConfig schema validation with safe parsing
+        const result = IdentityServiceConfigSchema.safeParse(env);
+
+        if (!result.success) {
+            console.error('Invalid identity service configuration:', {
+                errors: result.error.format()
+            });
+            throw new Error(`Invalid identity service configuration: ${result.error.message}`);
+        }
+
+        // Add computed properties
+        const finalConfig: IdentityConfig = {
+            ...result.data,
+            IS_PRODUCTION: result.data.NODE_ENV === 'production',
+            IS_DEVELOPMENT: result.data.NODE_ENV === 'development',
+            IS_TEST: result.data.NODE_ENV === 'test',
+        };
+
+        console.info('Identity service configuration loaded successfully');
+        return finalConfig;
+
+    } catch (error) {
+        console.error('Failed to load identity service configuration:', error);
+        throw error;
     }
 }
 
-export class Config {
-    // Server Configuration
-    public static readonly NODE_ENV: string = process.env.NODE_ENV || 'development';
-    public static readonly PORT: number = Number(process.env.PORT || 3001);
-    public static readonly IS_PRODUCTION: boolean = Config.NODE_ENV === 'production';
-    public static readonly IS_DEVELOPMENT: boolean = Config.NODE_ENV === 'development';
-    public static readonly IS_TEST: boolean = Config.NODE_ENV === 'test';
+// Export the config promise
+export const configPromise = createConfig();
 
-    // Database Configuration
-    public static readonly DB_HOST: string = process.env.DB_HOST || 'localhost';
-    public static readonly DB_PORT: number = Number(process.env.DB_PORT || 5432);
-    public static readonly DB_NAME: string = process.env.DB_NAME || '';
-    public static readonly DB_USER: string = process.env.DB_USER || '';
-    public static readonly DB_PASS: string = process.env.DB_PASS || '';
+// For backward compatibility, export a function to get the config
+export async function getConfig(): Promise<IdentityConfig> {
+    return await configPromise;
+}
 
-    // JWT Configuration
-    public static readonly JWT_SECRET: string = process.env.JWT_SECRET || '';
-    public static readonly JWT_EXPIRATION: string = process.env.JWT_EXPIRATION || '1h';
-    public static readonly JWT_REFRESH_SECRET: string = process.env.JWT_REFRESH_SECRET || '';
-    public static readonly JWT_REFRESH_EXPIRATION: string = process.env.JWT_REFRESH_EXPIRATION || '7d';
+// Legacy compatibility - synchronous Config object for backward compatibility
+// This will use a basic parse for immediate access, but async config is preferred
+let legacyConfig: IdentityConfig;
+try {
+    const tempResult = IdentityServiceConfigSchema.parse(process.env);
+    legacyConfig = {
+        ...tempResult,
+        IS_PRODUCTION: tempResult.NODE_ENV === 'production',
+        IS_DEVELOPMENT: tempResult.NODE_ENV === 'development',
+        IS_TEST: tempResult.NODE_ENV === 'test',
+    };
+} catch (error) {
+    console.error('Failed to create legacy config:', error);
+    throw error;
+}
 
-    // Logging Configuration
-    public static readonly LOG_LEVEL: string = process.env.LOG_LEVEL || 'info';
+// Export Config for compatibility with existing imports
+export const Config = legacyConfig;
 
-    // App Configuration
-    public static readonly SERVICE_NAME: string = process.env.SERVICE_NAME || 'identity-service';
-    public static readonly API_PREFIX: string = process.env.API_PREFIX || '/api';
-    public static readonly FRONTEND_URL: string = process.env.FRONTEND_URL || 'http://localhost:3000';
+// Legacy compatibility - export individual properties for backward compatibility
+export const {
+    // Core config
+    NODE_ENV,
+    PORT,
+    SERVICE_NAME,
+    DB_HOST,
+    DB_PORT,
+    DB_NAME,
+    DB_USER,
+    DB_PASS,
+    DB_MAX_POOL_SIZE,
+    LOG_LEVEL,
+    SERVICE_API_KEY,
 
-    // Admin Configuration
-    public static readonly ADMIN_KEY: string = process.env.ADMIN_KEY || '';
-    
-    // Service-to-service Authentication
-    public static readonly SERVICE_API_KEY: string = process.env.SERVICE_API_KEY || '';
+    // Identity-specific config
+    JWT_SECRET,
+    JWT_EXPIRATION,
+    JWT_REFRESH_SECRET,
+    JWT_REFRESH_EXPIRATION,
+    API_PREFIX,
+    FRONTEND_URL,
+    ADMIN_KEY,
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    MICROSOFT_CLIENT_ID,
+    MICROSOFT_CLIENT_SECRET,
+    LINKEDIN_CLIENT_ID,
+    LINKEDIN_CLIENT_SECRET,
+    NOTIFICATION_SERVICE_URL,
+    SHOW_ERROR_STACK,
+    SHOW_ERROR_DETAILS,
+    IS_PRODUCTION,
+    IS_DEVELOPMENT,
+    IS_TEST,
+} = Config;
 
-    // OAuth Configuration
-    public static readonly GOOGLE_CLIENT_ID: string = process.env.GOOGLE_CLIENT_ID || '';
-    public static readonly GOOGLE_CLIENT_SECRET: string = process.env.GOOGLE_CLIENT_SECRET || '';
-    public static readonly MICROSOFT_CLIENT_ID: string = process.env.MICROSOFT_CLIENT_ID || '';
-    public static readonly MICROSOFT_CLIENT_SECRET: string = process.env.MICROSOFT_CLIENT_SECRET || '';
-    public static readonly LINKEDIN_CLIENT_ID: string = process.env.LINKEDIN_CLIENT_ID || '';
-    public static readonly LINKEDIN_CLIENT_SECRET: string = process.env.LINKEDIN_CLIENT_SECRET || '';
-
-    // Service URLs
-    public static readonly NOTIFICATION_SERVICE_URL: string = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:5010';
-
-    // Error Handling
-    public static readonly SHOW_ERROR_STACK: boolean = process.env.SHOW_ERROR_STACK === 'true';
-    public static readonly SHOW_ERROR_DETAILS: boolean = process.env.SHOW_ERROR_DETAILS === 'true';
-} 
+// Legacy compatibility - keep the old Config class structure for backward compatibility
+export { getConfig as default };

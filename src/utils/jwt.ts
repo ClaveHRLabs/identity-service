@@ -5,6 +5,7 @@ import * as roleRepository from '../db/role';
 import * as userRepository from '../db/user';
 import { logger } from '../utils/logger';
 
+
 // Types
 export interface JwtPayload {
     // Standard JWT claims
@@ -37,7 +38,7 @@ export interface JwtPayload {
     state?: string;
     country?: string;
     zip?: string;
-    
+
     // Token type
     type: 'access' | 'refresh';
 
@@ -73,12 +74,12 @@ async function getUserPrimaryRole(userId: string): Promise<string> {
             'organization_manager',
             'organization_admin',
             'clavehr_operator',
-            'super_admin'
+            'super_admin',
         ];
 
         // Sort roles by priority
         const sortedRoles = userRoles
-            .map(ur => ur.role.name)
+            .map((ur) => ur.role.name)
             .sort((a, b) => {
                 const priorityA = rolePriority.indexOf(a);
                 const priorityB = rolePriority.indexOf(b);
@@ -90,7 +91,7 @@ async function getUserPrimaryRole(userId: string): Promise<string> {
     } catch (error) {
         logger.error('Error getting user primary role', {
             error: error instanceof Error ? error.message : 'Unknown error',
-            userId
+            userId,
         });
         return 'employee';
     }
@@ -104,11 +105,11 @@ async function getUserPrimaryRole(userId: string): Promise<string> {
 async function getUserRoleNames(userId: string): Promise<string[]> {
     try {
         const userRoles = await roleRepository.getUserRoles(userId);
-        return userRoles.map(ur => ur.role.name);
+        return userRoles.map((ur) => ur.role.name);
     } catch (error) {
         logger.error('Error getting user role names', {
             error: error instanceof Error ? error.message : 'Unknown error',
-            userId
+            userId,
         });
         return ['employee'];
     }
@@ -119,15 +120,18 @@ async function getUserRoleNames(userId: string): Promise<string[]> {
  * @param user User object
  * @param additionalData Optional additional data to include in the token
  */
-export async function generateAccessToken(user: User, additionalData?: Record<string, any>): Promise<string> {
+export async function generateAccessToken(
+    user: User,
+    additionalData?: Record<string, any>,
+): Promise<string> {
     // Get user's primary role and all roles
     const [primaryRole, roles, employee] = await Promise.all([
         getUserPrimaryRole(user.id),
         getUserRoleNames(user.id),
-        userRepository.getEmployeeByUserId(user.id, user.organization_id)
+        userRepository.getEmployeeByUserId(user.id, user.organization_id),
     ]);
 
-    console.log(">>> employee", employee);
+    console.log('>>> employee', employee);
 
     const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
         // Use sub as the user ID (JWT standard)
@@ -158,10 +162,10 @@ export async function generateAccessToken(user: User, additionalData?: Record<st
         zip: employee.zip,
 
         type: 'access',
-        metadata: user.metadata
+        metadata: user.metadata,
     };
 
-    logger.info(">>> payload", payload);
+    logger.info('>>> payload', payload);
 
     // Add additional data if provided
     if (additionalData) {
@@ -169,7 +173,7 @@ export async function generateAccessToken(user: User, additionalData?: Record<st
     }
 
     return jwt.sign(payload, Config.JWT_SECRET, {
-        expiresIn: Config.JWT_EXPIRATION as unknown as number
+        expiresIn: Config.JWT_EXPIRATION as unknown as number,
     });
 }
 
@@ -180,7 +184,7 @@ export async function generateRefreshToken(user: User): Promise<string> {
     // Get user's primary role
     const [primaryRole, employee] = await Promise.all([
         getUserPrimaryRole(user.id),
-        userRepository.getEmployeeByUserId(user.id, user.organization_id)
+        userRepository.getEmployeeByUserId(user.id, user.organization_id),
     ]);
 
     const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
@@ -198,11 +202,11 @@ export async function generateRefreshToken(user: User): Promise<string> {
         imageUrl: employee.avatar_url,
         isActive: employee.status !== 'inactive' && employee.status !== 'terminated',
         createdAt: employee.created_at,
-        type: 'refresh'
+        type: 'refresh',
     };
 
     return jwt.sign(payload, Config.JWT_REFRESH_SECRET, {
-        expiresIn: Config.JWT_REFRESH_EXPIRATION as unknown as number
+        expiresIn: Config.JWT_REFRESH_EXPIRATION as unknown as number,
     });
 }
 
@@ -244,4 +248,4 @@ export function verifyRefreshToken(token: string): Promise<JwtPayload> {
             resolve(payload);
         });
     });
-} 
+}

@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../../utils/jwt';
 import { getUserById } from '../../db/user';
-import { logger } from '../../utils/logger';
-import { AppError } from './error-handler';
+import logger from '../../utils/logger';
+import { HttpError, HttpStatusCode } from '@vspl/core';
 
 // Add user property to Express Request
 declare global {
@@ -18,7 +18,11 @@ declare global {
 /**
  * Authentication middleware that verifies the JWT token in the Authorization header
  */
-export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const authMiddleware = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+): Promise<void> => {
     try {
         // Skip token authentication if already authenticated by service auth
         if (req.isServiceRequest === true) {
@@ -28,13 +32,13 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
         const authHeader = req.headers.authorization;
 
         if (!authHeader) {
-            throw new AppError('No authorization token provided', 401, 'UNAUTHORIZED');
+            throw new HttpError(HttpStatusCode.UNAUTHORIZED, 'No authorization token provided');
         }
 
         // Check if the header follows the Bearer token format
         const parts = authHeader.split(' ');
         if (parts.length !== 2 || parts[0] !== 'Bearer') {
-            throw new AppError('Invalid authorization format', 401, 'UNAUTHORIZED');
+            throw new HttpError(HttpStatusCode.UNAUTHORIZED, 'Invalid authorization format');
         }
 
         const token = parts[1];
@@ -47,8 +51,10 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
         next();
     } catch (error) {
-        logger.warn('Authentication failed', { error });
-        next(new AppError('Authentication failed', 401, 'UNAUTHORIZED'));
+        logger.warn('Authentication failed', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        next(new HttpError(HttpStatusCode.UNAUTHORIZED, 'Authentication failed'));
     }
 };
 
@@ -56,7 +62,11 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
  * Optional authentication middleware that sets the user if a valid token is provided
  * but doesn't block the request if no token or an invalid token is provided
  */
-export const optionalAuthenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const optionalAuthenticate = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+): Promise<void> => {
     try {
         const authHeader = req.headers.authorization;
 
@@ -80,6 +90,9 @@ export const optionalAuthenticate = async (req: Request, res: Response, next: Ne
 
         next();
     } catch (error) {
+        logger.error('Error verifying token', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+        });
         // Don't block the request, just proceed without authentication
         next();
     }
@@ -98,7 +111,7 @@ export const loadUser = async (req: Request, res: Response, next: NextFunction):
         const user = await getUserById(req.userId);
 
         if (!user) {
-            throw new AppError('User not found', 401, 'UNAUTHORIZED');
+            throw new HttpError(HttpStatusCode.UNAUTHORIZED, 'User not found');
         }
 
         // Set the user on the request
@@ -106,7 +119,13 @@ export const loadUser = async (req: Request, res: Response, next: NextFunction):
 
         next();
     } catch (error) {
-        logger.error('Error loading user', { error, userId: req.userId });
+        logger.error('Error loading user', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            userId: req.userId,
+        });
         next(error);
     }
-}; 
+};
+
+// For backwards compatibility
+export const authenticate = authMiddleware;

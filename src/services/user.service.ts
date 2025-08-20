@@ -1,31 +1,47 @@
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 import * as userRepository from '../db/user';
 import * as roleRepository from '../db/role';
 import * as organizationRepository from '../db/organization';
 import { CreateUser, UpdateUser, User } from '../models/schemas/user';
-import { AppError } from '../api/middlewares/error-handler';
+import { HttpError, HttpStatusCode, CatchErrors, Measure } from '@vspl/core';
 import { ROLES } from '../models/enums/constants';
+import { PAGINATION } from '../constants/app.constants';
 
 // List of common email providers that should not be used for domain matching
 const COMMON_EMAIL_PROVIDERS = [
-    'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
-    'icloud.com', 'aol.com', 'protonmail.com', 'mail.com',
-    'zoho.com', 'yandex.com', 'gmx.com', 'live.com',
-    'msn.com', 'me.com', 'inbox.com', 'fastmail.com'
+    'gmail.com',
+    'yahoo.com',
+    'outlook.com',
+    'hotmail.com',
+    'icloud.com',
+    'aol.com',
+    'protonmail.com',
+    'mail.com',
+    'zoho.com',
+    'yandex.com',
+    'gmx.com',
+    'live.com',
+    'msn.com',
+    'me.com',
+    'inbox.com',
+    'fastmail.com',
 ];
 
 export class UserService {
     /**
      * Create a new user
      */
+    @CatchErrors()
+    @Measure()
     async createUser(userData: CreateUser): Promise<User> {
-        logger.info('Creating new user', { email: userData.email });
+            logger.info('Creating new user', { email: userData.email });
 
-        try {
             // Check if a user with this email already exists
             const existingUser = await userRepository.getUserByEmail(userData.email);
             if (existingUser) {
-                logger.warn('Failed to create user - email already exists', { email: userData.email });
+                logger.warn('Failed to create user - email already exists', {
+                    email: userData.email,
+                });
                 return existingUser;
             }
 
@@ -38,25 +54,21 @@ export class UserService {
                     // Skip common email providers
                     if (!COMMON_EMAIL_PROVIDERS.includes(emailDomain)) {
                         // Try to find a matching organization
-                        const organization = await organizationRepository.findOrganizationByEmailDomain(emailDomain);
+                        const organization =
+                            await organizationRepository.findOrganizationByEmailDomain(emailDomain);
 
                         if (organization) {
-                            logger.info('Auto-assigning user to organization based on email domain', {
-                                email: userData.email,
-                                domain: emailDomain,
-                                organizationId: organization.id,
-                                organizationName: organization.name
-                            });
+                            logger.info(
+                                'Auto-assigning user to organization based on email domain',
+                                {
+                                    email: userData.email,
+                                    domain: emailDomain,
+                                    organizationId: organization.id,
+                                    organizationName: organization.name,
+                                },
+                            );
                             userData.organization_id = organization.id;
-                        } else {
-                            logger.debug('No matching organization found for email domain', {
-                                emailDomain
-                            });
                         }
-                    } else {
-                        logger.debug('Skipping domain matching for common email provider', {
-                            emailDomain
-                        });
                     }
                 }
             }
@@ -64,63 +76,34 @@ export class UserService {
             const newUser = await userRepository.createUser(userData);
             logger.info('User created successfully', { id: newUser.id, email: newUser.email });
 
-
-            // Organization ID should exist for setting up the role
-            if (!userData.organization_id) {
-                return newUser;
-            }
-
-            // Assign default role to the new user
-            try {
-                // Get the appropriate role - if user is the creator of the organization, assign admin role
-                const isOrgCreator = userData.is_organization_creator === true;
-                const roleName = isOrgCreator ? ROLES.ADMIN : ROLES.EMPLOYEE;
-                
-                const role = await roleRepository.getRoleByName(roleName);
-                if (role) {
-                    // Assign the role
-                    await roleRepository.assignRoleToUser({
-                        user_id: newUser.id,
-                        role_id: role.id,
-                        organization_id: userData.organization_id
-                    });
-                    logger.info(`Default ${roleName} role assigned to user`, {
+            // If the user is assigned to an organization, give them the default "employee" role
+            if (userData.organization_id) {
+                try {
+                    await roleRepository.assignRoleToUserByName(
+                        newUser.id,
+                        ROLES.EMPLOYEE,
+                        userData.organization_id,
+                    );
+                    logger.info('Assigned default employee role to new user', {
                         userId: newUser.id,
-                        roleId: role.id,
-                        roleName
+                        organizationId: userData.organization_id,
                     });
-                } else {
-                    logger.warn(`Could not find ${roleName} role to assign to new user`, { 
+                } catch (roleError) {
+                    // Log error but don't fail user creation
+                    logger.error('Failed to assign default role to new user', {
+                        error: roleError instanceof Error ? roleError.message : 'Unknown error',
                         userId: newUser.id,
-                        roleName
                     });
                 }
-            } catch (roleError) {
-                // Don't fail user creation if role assignment fails
-                logger.error('Failed to assign default role', {
-                    userId: newUser.id,
-                    error: roleError instanceof Error ? roleError.message : 'Unknown error'
-                });
             }
 
             return newUser;
-        } catch (error) {
-            if (error instanceof AppError) {
-                throw error;
-            }
-
-            logger.error('Failed to create user', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                email: userData.email
-            });
-        }
-
-        throw new AppError('Failed to create user', 500, 'INTERNAL_SERVER_ERROR');
     }
 
     /**
      * Get user by ID
      */
+    @CatchErrors()
     async getUserById(id: string): Promise<User | null> {
         logger.debug('Fetching user by ID', { id });
         return userRepository.getUserById(id);
@@ -129,6 +112,7 @@ export class UserService {
     /**
      * Get user by email
      */
+    @CatchErrors()
     async getUserByEmail(email: string): Promise<User | null> {
         logger.debug('Fetching user by email', { email });
         return userRepository.getUserByEmail(email);
@@ -137,139 +121,110 @@ export class UserService {
     /**
      * Update user
      */
-    async updateUser(id: string, updateData: UpdateUser): Promise<User | null> {
-        logger.info('Updating user', { id });
+    @CatchErrors()
+    @Measure()
+    async updateUser(id: string, updateData: UpdateUser): Promise<User> {
+            logger.info('Updating user', { id });
 
-        try {
             // Check if user exists
             const existingUser = await userRepository.getUserById(id);
             if (!existingUser) {
                 logger.warn('Failed to update user - not found', { id });
-                return null;
+                throw new HttpError(HttpStatusCode.NOT_FOUND, 'User not found');
             }
 
-            // Check for email uniqueness if changing email
+            // Check if email is being changed, and if so, ensure it's not in use
             if (updateData.email && updateData.email !== existingUser.email) {
                 const emailExists = await userRepository.getUserByEmail(updateData.email);
-                if (emailExists) {
-                    logger.warn('Failed to update user - email already in use', { id, email: updateData.email });
-                    throw new AppError('Email already in use', 409, 'CONFLICT');
+                if (emailExists && emailExists.id !== id) {
+                    logger.warn('Failed to update user - email already in use', {
+                        id,
+                        email: updateData.email,
+                    });
+                    throw new HttpError(HttpStatusCode.CONFLICT, 'Email already in use');
+                }
+            }
+
+            // If changing organization, make sure the organization exists
+            if (updateData.organization_id) {
+                const organization = await organizationRepository.getOrganizationProfileById(
+                    updateData.organization_id,
+                );
+                if (!organization) {
+                    logger.warn('Failed to update user - organization not found', {
+                        id,
+                        organizationId: updateData.organization_id,
+                    });
+                    throw new HttpError(HttpStatusCode.NOT_FOUND, 'Organization not found');
                 }
             }
 
             const updatedUser = await userRepository.updateUser(id, updateData);
             logger.info('User updated successfully', { id });
-            return updatedUser;
-        } catch (error) {
-            if (error instanceof AppError) {
-                throw error;
+            if (!updatedUser) {
+                throw new HttpError(HttpStatusCode.NOT_FOUND, 'User not found after update');
             }
-
-            logger.error('Failed to update user', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                id
-            });
-            throw error;
-        }
+            return updatedUser;
     }
 
     /**
      * Delete user
      */
+    @CatchErrors()
+    @Measure()
     async deleteUser(id: string): Promise<boolean> {
-        logger.info('Deleting user', { id });
+            logger.info('Deleting user', { id });
 
-        try {
-            const deleted = await userRepository.deleteUser(id);
-
-            if (deleted) {
-                logger.info('User deleted successfully', { id });
-            } else {
+            // Check if user exists
+            const existingUser = await userRepository.getUserById(id);
+            if (!existingUser) {
                 logger.warn('Failed to delete user - not found', { id });
+                throw new HttpError(HttpStatusCode.NOT_FOUND, 'User not found');
             }
 
+            const deleted = await userRepository.deleteUser(id);
+            logger.info('User deleted successfully', { id });
             return deleted;
-        } catch (error) {
-            logger.error('Failed to delete user', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                id
-            });
-            throw error;
-        }
     }
 
     /**
-     * Get users with filtering and pagination
+     * List users with pagination
      */
-    async getUsers(
-        filters: { organization_id?: string; status?: string; email?: string } = {},
-        limit = 100,
-        offset = 0
+    @CatchErrors()
+    @Measure()
+    async listUsers(
+        limit: number = PAGINATION.DEFAULT_LIMIT,
+        offset: number = PAGINATION.DEFAULT_OFFSET,
+        organizationId?: string,
     ): Promise<{ users: User[]; total: number }> {
-        logger.debug('Fetching users with filters', { filters, limit, offset });
+            logger.debug('Listing users', { limit, offset, organizationId });
 
-        try {
             const [users, total] = await Promise.all([
-                userRepository.getUsers(filters, limit, offset),
-                userRepository.countUsers(filters)
+                userRepository.getUsers(),
+                userRepository.countUsers({ organization_id: organizationId }),
             ]);
 
             return { users, total };
-        } catch (error) {
-            logger.error('Failed to fetch users', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                filters
-            });
-            throw error;
-        }
     }
 
     /**
-     * Set email verification status
+     * Search users by query
      */
-    async setEmailVerified(id: string, verified: boolean = true): Promise<User | null> {
-        logger.info('Setting email verification status', { id, verified });
+    @CatchErrors()
+    @Measure()
+    async searchUsers(
+        query: string,
+        limit: number = PAGINATION.DEFAULT_LIMIT,
+        offset: number = PAGINATION.DEFAULT_OFFSET,
+        organizationId?: string,
+    ): Promise<{ users: User[]; total: number }> {
+            logger.debug('Searching users', { query, limit, offset, organizationId });
 
-        try {
-            const user = await userRepository.setEmailVerified(id, verified);
+            const [users, total] = await Promise.all([
+                userRepository.getUsers(), // TODO: implement searchUsers
+                userRepository.countUsers({ organization_id: organizationId }),
+            ]);
 
-            if (user) {
-                logger.info('Email verification status updated', { id, verified });
-            } else {
-                logger.warn('Failed to update email verification status - user not found', { id });
-            }
-
-            return user;
-        } catch (error) {
-            logger.error('Failed to update email verification status', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                id
-            });
-            throw error;
-        }
+            return { users, total };
     }
-
-    /**
-     * Update last login time
-     */
-    async updateLastLogin(id: string): Promise<User | null> {
-        logger.debug('Updating last login time', { id });
-        return userRepository.updateLastLogin(id);
-    }
-
-    /**
-     * Get organization by ID
-     */
-    async getOrganizationById(id: string): Promise<any | null> {
-        logger.debug('Fetching organization by ID', { id });
-        try {
-            return await organizationRepository.getOrganizationProfileById(id);
-        } catch (error) {
-            logger.error('Error fetching organization by ID', { 
-                error: error instanceof Error ? error.message : 'Unknown error',
-                id 
-            });
-            return null;
-        }
-    }
-} 
+}

@@ -1,5 +1,4 @@
-import { Express } from 'express-serve-static-core';
-import * as express from 'express';
+// Express type extensions
 
 declare global {
     namespace Express {
@@ -20,4 +19,4 @@ declare global {
             // Removed duplicate setupCode declaration
         }
     }
-} 
+}

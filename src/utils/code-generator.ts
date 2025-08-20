@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { CODE_GENERATION } from '../constants/app.constants';
 
 /**
  * Generates a cryptographically secure random code
@@ -6,12 +7,12 @@ import crypto from 'crypto';
  * @param includeSymbols Whether to include symbols in the code
  * @returns A random alphanumeric code
  */
-export function generateRandomCode(length = 10, includeSymbols = false): string {
+export function generateRandomCode(length: number = CODE_GENERATION.DEFAULT_CODE_LENGTH, includeSymbols = false): string {
     // Define character sets
-    const uppercaseChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // Omit O and I for readability
-    const lowercaseChars = 'abcdefghijkmnpqrstuvwxyz'; // Omit l and o for readability
-    const numbers = '23456789'; // Omit 0 and 1 for readability
-    const symbols = includeSymbols ? '!@#$%^&*-_=+' : '';
+    const uppercaseChars = CODE_GENERATION.UPPERCASE_CHARS;
+    const lowercaseChars = CODE_GENERATION.LOWERCASE_CHARS;
+    const numbers = CODE_GENERATION.NUMBERS;
+    const symbols = includeSymbols ? CODE_GENERATION.SYMBOLS : '';
 
     // Combine character sets
     const allChars = uppercaseChars + lowercaseChars + numbers + symbols;
@@ -33,7 +34,7 @@ export function generateRandomCode(length = 10, includeSymbols = false): string 
  * @param byteLength The number of bytes (actual string length will be double)
  * @returns A random hex string
  */
-export function generateRandomHex(byteLength = 16): string {
+export function generateRandomHex(byteLength: number = CODE_GENERATION.DEFAULT_HEX_BYTE_LENGTH): string {
     return crypto.randomBytes(byteLength).toString('hex');
 }
 
@@ -44,19 +45,25 @@ export function generateRandomHex(byteLength = 16): string {
 export function generateClaveSetupCode(): string {
     // Use only uppercase letters for the X parts
     const uppercaseChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // Omit O and I for readability
-    
+
     // Generate 3 letters for XXX part
-    const firstPart = Array(3).fill(0).map(() => {
-        const randomIndex = crypto.randomBytes(1)[0] % uppercaseChars.length;
-        return uppercaseChars[randomIndex];
-    }).join('');
-    
+    const firstPart = Array(3)
+        .fill(0)
+        .map(() => {
+            const randomIndex = crypto.randomBytes(1)[0] % uppercaseChars.length;
+            return uppercaseChars[randomIndex];
+        })
+        .join('');
+
     // Generate 4 letters for XXXX part
-    const secondPart = Array(4).fill(0).map(() => {
-        const randomIndex = crypto.randomBytes(1)[0] % uppercaseChars.length;
-        return uppercaseChars[randomIndex];
-    }).join('');
-    
+    const secondPart = Array(4)
+        .fill(0)
+        .map(() => {
+            const randomIndex = crypto.randomBytes(1)[0] % uppercaseChars.length;
+            return uppercaseChars[randomIndex];
+        })
+        .join('');
+
     return `CLAVE-${firstPart}-${secondPart}`;
 }
 
@@ -81,4 +88,4 @@ export function generateHash(value: string, salt = ''): string {
         .createHash('sha256')
         .update(value + salt)
         .digest('hex');
-} 
+}

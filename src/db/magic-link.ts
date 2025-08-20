@@ -19,12 +19,7 @@ export async function createMagicLink(data: CreateMagicLink): Promise<MagicLink>
             email, token, expires_at, metadata
         ) VALUES ($1, $2, $3, $4) 
         RETURNING *`,
-        [
-            data.email,
-            token,
-            expires_at,
-            data.metadata || {}
-        ]
+        [data.email, token, expires_at, data.metadata || {}],
     );
 
     return result.rows[0];
@@ -34,10 +29,7 @@ export async function createMagicLink(data: CreateMagicLink): Promise<MagicLink>
  * Get magic link by token
  */
 export async function getMagicLinkByToken(token: string): Promise<MagicLink | null> {
-    const result = await db.query(
-        'SELECT * FROM magic_links WHERE token = $1',
-        [token]
-    );
+    const result = await db.query('SELECT * FROM magic_links WHERE token = $1', [token]);
     return result.rows[0] || null;
 }
 
@@ -47,7 +39,7 @@ export async function getMagicLinkByToken(token: string): Promise<MagicLink | nu
 export async function getMagicLinksByEmail(email: string): Promise<MagicLink[]> {
     const result = await db.query(
         'SELECT * FROM magic_links WHERE email = $1 ORDER BY created_at DESC',
-        [email]
+        [email],
     );
     return result.rows;
 }
@@ -62,7 +54,7 @@ export async function markMagicLinkAsUsed(id: string): Promise<MagicLink | null>
          SET used = true, used_at = $1 
          WHERE id = $2 
          RETURNING *`,
-        [now, id]
+        [now, id],
     );
     return result.rows[0] || null;
 }
@@ -103,8 +95,8 @@ export async function cleanupMagicLinks(): Promise<number> {
         `DELETE FROM magic_links 
          WHERE expires_at < $1 OR used = true 
          RETURNING id`,
-        [now]
+        [now],
     );
 
     return result.rowCount || 0;
-} 
+}

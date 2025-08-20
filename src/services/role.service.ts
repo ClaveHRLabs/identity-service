@@ -1,4 +1,4 @@
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 import * as roleRepository from '../db/role';
 import {
     Role,
@@ -12,7 +12,7 @@ import {
     AssignRole,
     AssignPermission
 } from '../models/schemas/role';
-import { AppError } from '../api/middlewares/error-handler';
+import { HttpError, HttpStatusCode, CatchErrors, Measure } from '@vspl/core';
 
 export class RoleService {
     /**
@@ -20,40 +20,32 @@ export class RoleService {
      */
 
     // Create a new role
+    @CatchErrors()
+    @Measure()
     async createRole(roleData: CreateRole): Promise<Role> {
         logger.info('Creating new role', { name: roleData.name });
 
-        try {
-            // Check if role with this name already exists
-            const existingRole = await roleRepository.getRoleByName(roleData.name);
-            if (existingRole) {
-                logger.warn('Failed to create role - name already exists', { name: roleData.name });
-                throw new AppError('Role with this name already exists', 409, 'CONFLICT');
-            }
-
-            const newRole = await roleRepository.createRole(roleData);
-            logger.info('Role created successfully', { id: newRole.id, name: newRole.name });
-            return newRole;
-        } catch (error) {
-            if (error instanceof AppError) {
-                throw error;
-            }
-
-            logger.error('Failed to create role', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                name: roleData.name
-            });
-            throw error;
+        // Check if role with this name already exists
+        const existingRole = await roleRepository.getRoleByName(roleData.name);
+        if (existingRole) {
+            logger.warn('Failed to create role - name already exists', { name: roleData.name });
+            throw new HttpError(HttpStatusCode.CONFLICT, 'Role with this name already exists');
         }
+
+        const newRole = await roleRepository.createRole(roleData);
+        logger.info('Role created successfully', { id: newRole.id, name: newRole.name });
+        return newRole;
     }
 
     // Get role by ID
+    @CatchErrors()
     async getRoleById(id: string): Promise<Role | null> {
         logger.debug('Fetching role by ID', { id });
         return roleRepository.getRoleById(id);
     }
 
     // Get role by name
+    @CatchErrors()
     async getRoleByName(name: string): Promise<Role | null> {
         logger.debug('Fetching role by name', { name });
         return roleRepository.getRoleByName(name);
@@ -76,7 +68,7 @@ export class RoleService {
                 const nameExists = await roleRepository.getRoleByName(updateData.name);
                 if (nameExists) {
                     logger.warn('Failed to update role - name already in use', { id, name: updateData.name });
-                    throw new AppError('Role name already in use', 409, 'CONFLICT');
+                    throw new HttpError(HttpStatusCode.CONFLICT, 'Role name already in use');
                 }
             }
 
@@ -84,7 +76,7 @@ export class RoleService {
             logger.info('Role updated successfully', { id });
             return updatedRole;
         } catch (error) {
-            if (error instanceof AppError) {
+            if (error instanceof HttpError) {
                 throw error;
             }
 
@@ -154,14 +146,14 @@ export class RoleService {
             const existingPermission = await roleRepository.getPermissionByName(permissionData.name);
             if (existingPermission) {
                 logger.warn('Failed to create permission - name already exists', { name: permissionData.name });
-                throw new AppError('Permission with this name already exists', 409, 'CONFLICT');
+                throw new HttpError(HttpStatusCode.CONFLICT, 'Permission with this name already exists');
             }
 
             const newPermission = await roleRepository.createPermission(permissionData);
             logger.info('Permission created successfully', { id: newPermission.id, name: newPermission.name });
             return newPermission;
         } catch (error) {
-            if (error instanceof AppError) {
+            if (error instanceof HttpError) {
                 throw error;
             }
 
@@ -202,7 +194,7 @@ export class RoleService {
                 const nameExists = await roleRepository.getPermissionByName(updateData.name);
                 if (nameExists) {
                     logger.warn('Failed to update permission - name already in use', { id, name: updateData.name });
-                    throw new AppError('Permission name already in use', 409, 'CONFLICT');
+                    throw new HttpError(HttpStatusCode.CONFLICT, 'Permission name already in use');
                 }
             }
 
@@ -210,7 +202,7 @@ export class RoleService {
             logger.info('Permission updated successfully', { id });
             return updatedPermission;
         } catch (error) {
-            if (error instanceof AppError) {
+            if (error instanceof HttpError) {
                 throw error;
             }
 
@@ -304,7 +296,7 @@ export class RoleService {
             const role = await this.getRoleByName(roleName);
             if (!role) {
                 logger.warn('Role not found for assignment', { roleName });
-                throw new AppError(`Role '${roleName}' not found`, 404, 'NOT_FOUND');
+                throw new HttpError(HttpStatusCode.NOT_FOUND, `Role '${roleName}' not found`);
             }
 
             // Create assignment data

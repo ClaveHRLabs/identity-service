@@ -12,7 +12,7 @@ import {
     DeleteOrganizationProfileValidator,
     ListOrganizationProfilesValidator,
     UpdateOrganizationBrandingValidator,
-    CompleteOrganizationSetupValidator
+    CompleteOrganizationSetupValidator,
 } from '../validators/organization.validator';
 import { logger } from '../../utils/logger';
 import { Permission } from '../../models/enums/roles.enum';
@@ -27,7 +27,7 @@ const authOrSetupCode = (req: any, res: any, next: any) => {
         logger.debug('Using setup code authentication for route', {
             path: req.path,
             method: req.method,
-            organizationId: req.params.id
+            organizationId: req.params.id,
         });
         return next();
     }
@@ -35,7 +35,7 @@ const authOrSetupCode = (req: any, res: any, next: any) => {
     // Otherwise apply normal authentication
     logger.debug('Using JWT authentication for route', {
         path: req.path,
-        method: req.method
+        method: req.method,
     });
     authenticate(req, res, next);
 };
@@ -52,15 +52,15 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
         authOrSetupCode,
         authorize(Permission.MANAGE_ORGANIZATION_SETTINGS),
         validateRequest(CreateOrganizationProfileValidator),
-        organizationController.createOrganization.bind(organizationController)
+        organizationController.createOrganization.bind(organizationController),
     );
-    
+
     // Create an organization and assign the current user as admin
     router.post(
         '/with-admin',
         authenticate,
         validateRequest(CreateOrganizationWithAdminValidator),
-        organizationController.createOrganizationWithAdmin.bind(organizationController)
+        organizationController.createOrganizationWithAdmin.bind(organizationController),
     );
 
     // Get an organization profile by ID - requires setup code or view_all_users permission
@@ -68,7 +68,7 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
         '/:id',
         authOrSetupCode,
         validateRequest(GetOrganizationProfileValidator),
-        organizationController.getOrganization.bind(organizationController)
+        organizationController.getOrganization.bind(organizationController),
     );
 
     // Update an organization profile - requires setup code or manage_organizations permission
@@ -77,7 +77,7 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
         authOrSetupCode,
         authorize(Permission.MANAGE_ORGANIZATION_SETTINGS),
         validateRequest(UpdateOrganizationProfileValidator),
-        organizationController.updateOrganization.bind(organizationController)
+        organizationController.updateOrganization.bind(organizationController),
     );
 
     // Update an organization profile using setup code - skip auth if setup code is present
@@ -86,7 +86,7 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
         authOrSetupCode,
         authorize(Permission.MANAGE_ORGANIZATION_SETTINGS),
         validateRequest(UpdateOrganizationProfileValidator),
-        organizationController.updateOrganization.bind(organizationController)
+        organizationController.updateOrganization.bind(organizationController),
     );
 
     // Delete an organization profile - requires setup code or manage_organizations permission
@@ -95,7 +95,7 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
         authOrSetupCode,
         authorize(Permission.MANAGE_ORGANIZATION_SETTINGS),
         validateRequest(DeleteOrganizationProfileValidator),
-        organizationController.deleteOrganization.bind(organizationController)
+        organizationController.deleteOrganization.bind(organizationController),
     );
 
     // List organization profiles with optional filtering - requires view_all_users permission
@@ -104,7 +104,7 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
         authenticate,
         authorize('view_all_users'),
         validateRequest(ListOrganizationProfilesValidator),
-        organizationController.listOrganizations.bind(organizationController)
+        organizationController.listOrganizations.bind(organizationController),
     );
 
     // Update organization branding - requires setup code or manage_organizations permission
@@ -113,7 +113,7 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
         authOrSetupCode,
         authorize(Permission.MANAGE_ORGANIZATION_SETTINGS),
         validateRequest(UpdateOrganizationBrandingValidator),
-        organizationController.updateOrganizationBranding.bind(organizationController)
+        organizationController.updateOrganizationBranding.bind(organizationController),
     );
 
     // Complete organization setup - requires setup code
@@ -122,8 +122,8 @@ export const createOrganizationRoutes = (organizationController: OrganizationCon
         authOrSetupCode,
         authorize(Permission.MANAGE_ORGANIZATION_SETTINGS),
         validateRequest(CompleteOrganizationSetupValidator),
-        organizationController.completeOrganizationSetup.bind(organizationController)
+        organizationController.completeOrganizationSetup.bind(organizationController),
     );
 
     return router;
-}; 
+};

@@ -7,31 +7,31 @@ import {
     LinkedInAuthSchema,
     SendMagicLinkSchema,
     VerifyMagicLinkSchema,
-    InitiateOAuthSchema
+    InitiateOAuthSchema,
 } from '../../models/schemas/user';
 
 // User management validators
 export const CreateUserValidator = z.object({
-    body: CreateUserSchema
+    body: CreateUserSchema,
 });
 
 export const UpdateUserValidator = z.object({
     params: z.object({
-        id: z.string().uuid('Invalid user ID')
+        id: z.string().uuid('Invalid user ID'),
     }),
-    body: UpdateUserSchema
+    body: UpdateUserSchema,
 });
 
 export const GetUserValidator = z.object({
     params: z.object({
-        id: z.string().uuid('Invalid user ID')
-    })
+        id: z.string().uuid('Invalid user ID'),
+    }),
 });
 
 export const DeleteUserValidator = z.object({
     params: z.object({
-        id: z.string().uuid('Invalid user ID')
-    })
+        id: z.string().uuid('Invalid user ID'),
+    }),
 });
 
 export const ListUsersValidator = z.object({
@@ -40,46 +40,46 @@ export const ListUsersValidator = z.object({
         status: z.enum(['active', 'inactive', 'suspended']).optional(),
         email: z.string().email('Invalid email').optional(),
         limit: z.string().transform(Number).optional(),
-        offset: z.string().transform(Number).optional()
-    })
+        offset: z.string().transform(Number).optional(),
+    }),
 });
 
 // Authentication validators
 export const GoogleAuthValidator = z.object({
-    body: GoogleAuthSchema
+    body: GoogleAuthSchema,
 });
 
 export const MicrosoftAuthValidator = z.object({
-    body: MicrosoftAuthSchema
+    body: MicrosoftAuthSchema,
 });
 
 export const LinkedInAuthValidator = z.object({
-    body: LinkedInAuthSchema
+    body: LinkedInAuthSchema,
 });
 
 export const InitiateOAuthValidator = z.object({
-    query: InitiateOAuthSchema
+    query: InitiateOAuthSchema,
 });
 
 export const SendMagicLinkValidator = z.object({
-    body: SendMagicLinkSchema
+    body: SendMagicLinkSchema,
 });
 
 export const VerifyMagicLinkValidator = z.object({
-    body: VerifyMagicLinkSchema
+    body: VerifyMagicLinkSchema,
 });
 
 export const RefreshTokenValidator = z.object({
     body: z.object({
-        refresh_token: z.string().min(1, 'Refresh token is required')
-    })
+        refresh_token: z.string().min(1, 'Refresh token is required'),
+    }),
 });
 
 export const LogoutValidator = z.object({
     body: z.object({
-        refresh_token: z.string().min(1, 'Refresh token is required').optional()
-    })
+        refresh_token: z.string().min(1, 'Refresh token is required').optional(),
+    }),
 });
 
 // Get current user (requires authentication)
-export const GetCurrentUserValidator = z.object({}); 
+export const GetCurrentUserValidator = z.object({});

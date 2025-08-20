@@ -1,18 +1,13 @@
-import winston from 'winston';
-import { Config } from '../config/config';
+import { createLogger, createSingleton } from '@vspl/core';
+import { SERVICE_NAME, LOG_LEVEL } from '../config/config';
 
-export const logger = winston.createLogger({
-    level: Config.LOG_LEVEL,
-    format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-    ),
-    transports: [
-        new winston.transports.Console({
-            format: winston.format.combine(
-                winston.format.colorize(),
-                winston.format.simple()
-            ),
-        }),
-    ],
-}); 
+// Create singleton logger instance
+export const logger = createSingleton(() =>
+    createLogger({
+        service: SERVICE_NAME,
+        level: LOG_LEVEL,
+    }),
+)();
+
+// Export the logger for backward compatibility
+export default logger;
