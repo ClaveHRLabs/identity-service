@@ -134,7 +134,9 @@ export class AuthService {
                 },
             );
 
-            const accessToken = (tokenResponse as any).data.access_token;
+            logger.debug(`Received ${providerType} OAuth token`, { tokenResponse });
+
+            const accessToken = (tokenResponse as any).access_token;
             if (!accessToken) {
                 throw new HttpError(HttpStatusCode.BAD_REQUEST, 'Failed to get access token');
             }
@@ -148,6 +150,8 @@ export class AuthService {
                 },
             });
 
+            logger.debug(`Received ${providerType} user profile`, { userInfoResponse });
+
             // Extract user data from response
             let email: string;
             let firstName: string | undefined;
@@ -156,11 +160,11 @@ export class AuthService {
             let picture: string | undefined;
 
             if (providerType === 'google') {
-                email = (userInfoResponse as any).data.email;
-                firstName = (userInfoResponse as any).data.given_name;
-                lastName = (userInfoResponse as any).data.family_name;
-                displayName = (userInfoResponse as any).data.name;
-                picture = (userInfoResponse as any).data.picture;
+                email = (userInfoResponse as any).email;
+                firstName = (userInfoResponse as any).given_name;
+                lastName = (userInfoResponse as any).family_name;
+                displayName = (userInfoResponse as any).name;
+                picture = (userInfoResponse as any).picture;
             } else if (providerType === 'microsoft') {
                 email = (userInfoResponse as any).data.mail || (userInfoResponse as any).data.userPrincipalName;
                 firstName = (userInfoResponse as any).data.givenName;
@@ -348,23 +352,19 @@ export class AuthService {
                 });
             }
 
-            // Generate magic link token
-            const token =
-                Math.random().toString(36).substring(2, AUTH.RANDOM_TOKEN_LENGTH) +
-                Math.random().toString(36).substring(2, AUTH.RANDOM_TOKEN_LENGTH);
-
             // Save token
-            await magicLinkRepository.createMagicLink({
+            const magicLink = await magicLinkRepository.createMagicLink({
                 email: user.email,
                 expiration_minutes: TOKEN.MAGIC_LINK_EXPIRATION_MINUTES,
                 metadata: {
                     redirect_uri: redirectUri,
-                    token: token,
                 }
             });
 
             // Generate magic link URL
-            const magicLinkUrl = `${FRONTEND_URL}/auth/verify?token=${token}`;
+            const magicLinkUrl = `${FRONTEND_URL}/verify-email?token=${magicLink.token}`;
+
+            logger.info(`Generated magic link URL for ${email}: ${magicLinkUrl}`);
 
             // Send email with magic link
             await this.emailService.sendMagicLinkEmail(email, magicLinkUrl);

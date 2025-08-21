@@ -1,6 +1,6 @@
 import { createHttpClient } from '@vspl/core';
 import { SERVICE_NAME, SERVICE_API_KEY } from '../config/config';
-import { TIMEOUTS, HTTP_CLIENT } from '../constants/app.constants';
+import { TIMEOUTS } from '../constants/app.constants';
 import logger from './logger';
 
 /**
@@ -9,13 +9,11 @@ import logger from './logger';
 export const createServiceClient = (baseUrl: string) => {
     return createHttpClient({
         baseUrl,
-        apiKey: SERVICE_API_KEY,
-        serviceKey: SERVICE_NAME,
+        apiKey: SERVICE_NAME,
+        serviceKey: SERVICE_API_KEY,
         timeout: TIMEOUTS.DEFAULT_HTTP_TIMEOUT_MS,
-        retryOptions: {
-            maxRetries: HTTP_CLIENT.MAX_RETRIES,
-            baseDelay: HTTP_CLIENT.BASE_DELAY_MS,
-            exponentialBackoff: HTTP_CLIENT.EXPONENTIAL_BACKOFF,
+        headers: {
+            'Content-Type': 'application/json',
         },
         logger,
     });

@@ -8,9 +8,9 @@ import { logger } from '../utils/logger';
 export async function createUser(data: CreateUser): Promise<User> {
     const result = await db.query(
         `INSERT INTO users (
-            email, first_name, last_name, display_name, avatar_url, 
+            email, first_name, last_name, display_name, avatar_url,
             organization_id, metadata, preferences
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *`,
         [
             data.email,
@@ -122,7 +122,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
         const rolesResult = await db.query(
             `SELECT r.name 
             FROM roles r 
-            INNER JOIN user_roles ur ON r.id = ur.role_id 
+            INNER JOIN user_roles ur ON r.id = ur.role_id
             WHERE ur.user_id = $1`,
             [user.id],
         );

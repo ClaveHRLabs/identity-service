@@ -41,8 +41,8 @@ export const RATE_LIMIT = {
  * Timeout Constants
  */
 export const TIMEOUTS = {
-    DEFAULT_HTTP_TIMEOUT_MS: 10000, // 10 seconds
-    GRACEFUL_SHUTDOWN_TIMEOUT_MS: 10000, // 10 seconds
+    DEFAULT_HTTP_TIMEOUT_MS: 5000, // 5 seconds
+    GRACEFUL_SHUTDOWN_TIMEOUT_MS: 5000, // 5 seconds
 } as const;
 
 /**

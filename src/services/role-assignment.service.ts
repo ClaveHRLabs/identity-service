@@ -1,6 +1,6 @@
 import { logger } from '../utils/logger';
 import { RoleService } from './role.service';
-import { UserRole } from '../models/enums/roles.enum';
+import { UserRole } from '@vspl/core';
 
 /**
  * Service to handle role assignment validation and business rules

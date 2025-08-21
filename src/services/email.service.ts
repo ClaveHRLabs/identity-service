@@ -1,14 +1,11 @@
 import { logger } from '../utils/logger';
-import { Config } from '../config/config';
+import { Config, API_PREFIX } from '../config/config';
 import { notificationClient } from '../utils/notification-client';
 
 // Note: In a real application, you would use a proper email service like
 // nodemailer, SendGrid, AWS SES, etc. This is a simplified version for development.
 
 export class EmailService {
-    constructor() {
-        // notificationClient is already a singleton instance
-    }
 
     /**
      * Send a magic link email for authentication
@@ -20,37 +17,28 @@ export class EmailService {
         organizationId: string = '',
         organizationName: string = 'Clave HR',
     ): Promise<void> {
-        // In development mode, just log the magic link URL
-        if (Config.IS_DEVELOPMENT) {
-            logger.info(`[DEV MODE] Magic link for ${email}: ${verificationUrl}`);
-            // Even in development, also try to send the actual notification
-        }
+        logger.info(`Magic link for ${email}: ${verificationUrl}`);
 
-        try {
-            // Send the login link notification using the notification service
-            await notificationClient().post('/send-login-link', {
+        notificationClient().post(`/api/notifications`, {
+            type: 'EMAIL',
+            templateId: 'c6f79ba8-d139-4be7-bd2a-7d60d5db51ff',
+            recipientType: 'USER',
+            recipientDetails: {
                 email,
-                name,
-                verificationUrl,
-                organizationId,
-                organizationName,
-            });
-
-            logger.info(`Sent magic link email to ${email} using notification service`);
-        } catch (error) {
-            logger.error('Error sending magic link email through notification service', {
-                error,
-                email,
-            });
-
-            // Fallback to logging for development if notification service fails
-            if (Config.IS_DEVELOPMENT) {
-                logger.info(`[DEV FALLBACK] Magic link for ${email}: ${verificationUrl}`);
-                return;
+            },
+            name,
+            verificationUrl,
+            organizationId,
+            organizationName,
+            priority: 1,
+            scheduledAt: new Date(),
+            payload: {
+                "LOGIN_LINK": verificationUrl,
+                "LOGIN_LINK_TEXT": "Login to your account",
+                "ORGANIZATION": organizationName,
+                "CURRENT_YEAR": new Date().getFullYear()
             }
-
-            throw new Error('Failed to send magic link email');
-        }
+        });
     }
 
     /**

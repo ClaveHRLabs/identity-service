@@ -7,13 +7,14 @@
         "build": "npm run lint && tsc",
         "start": "node dist/app.js",
         "dev": "nodemon",
+        "clean": "rm -rf dist && rm -rf node_modules",
         "test": "jest",
         "lint": "eslint src",
         "format": "prettier --write \"**/*.{js,ts,tsx,json,md,css,scss,yml,yaml,html,mdx}\" --ignore-path .prettierignore",
         "migrate": "node scripts/migrate.js"
     },
     "dependencies": {
-        "@vspl/core": "^0.1.8",
+        "@vspl/core": "file:../libs/lib-core",
         "bcryptjs": "^2.4.3",
         "express-rate-limit": "^8.0.1",
         "jsonwebtoken": "^9.0.2",

@@ -9,7 +9,13 @@ export async function createAuthProvider(data: CreateAuthProvider): Promise<Auth
         `INSERT INTO auth_providers (
             user_id, provider_type, provider_user_id, email, 
             access_token, refresh_token, token_expires_at, metadata
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (provider_type, email) DO UPDATE SET
+            provider_user_id = EXCLUDED.provider_user_id,
+            access_token = EXCLUDED.access_token,
+            refresh_token = EXCLUDED.refresh_token,
+            token_expires_at = EXCLUDED.token_expires_at,
+            metadata = EXCLUDED.metadata
         RETURNING *`,
         [
             data.user_id,

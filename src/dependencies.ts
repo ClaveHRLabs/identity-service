@@ -62,7 +62,6 @@ export const app = createApp({
     errorHandlerOptions: {
         includeStackTrace: Config.SHOW_ERROR_STACK,
     },
-
     middleware: [limiter],
 });
 

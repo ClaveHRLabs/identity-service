@@ -7,7 +7,7 @@ import { generateToken } from '../utils/token-generator';
  */
 export async function createMagicLink(data: CreateMagicLink): Promise<MagicLink> {
     // Generate a secure random token
-    const token = generateToken(48);
+    const token = generateToken(16);
 
     // Calculate expiration time (default 30 minutes)
     const expirationMinutes = data.expiration_minutes || 30;
@@ -17,7 +17,7 @@ export async function createMagicLink(data: CreateMagicLink): Promise<MagicLink>
     const result = await db.query(
         `INSERT INTO magic_links (
             email, token, expires_at, metadata
-        ) VALUES ($1, $2, $3, $4) 
+        ) VALUES ($1, $2, $3, $4)
         RETURNING *`,
         [data.email, token, expires_at, data.metadata || {}],
     );

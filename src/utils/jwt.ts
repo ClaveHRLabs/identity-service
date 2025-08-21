@@ -131,7 +131,6 @@ export async function generateAccessToken(
         userRepository.getEmployeeByUserId(user.id, user.organization_id),
     ]);
 
-    console.log('>>> employee', employee);
 
     const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
         // Use sub as the user ID (JWT standard)
@@ -146,20 +145,20 @@ export async function generateAccessToken(
         roles: roles,
         status: user.status || 'active',
         organizationId: user.organization_id,
-        employeeId: employee.id, // Add employeeId to the token
-        managerId: employee.managerId,
-        department: employee.department,
-        title: employee.title,
-        imageUrl: employee.avatar_url,
-        isActive: employee.status !== 'inactive' && employee.status !== 'terminated',
-        createdAt: employee.created_at,
-        updatedAt: employee.updated_at,
-        employmentStatus: employee.status,
-        internalEmployeeId: employee.employee_id_number,
-        city: employee.city,
-        state: employee.state,
-        country: employee.country,
-        zip: employee.zip,
+        employeeId: employee?.id, // Add employeeId to the token
+        managerId: employee?.managerId,
+        department: employee?.department,
+        title: employee?.title,
+        imageUrl: employee?.avatar_url,
+        isActive: employee?.status !== 'inactive' && employee?.status !== 'terminated',
+        createdAt: employee?.created_at,
+        updatedAt: employee?.updated_at,
+        employmentStatus: employee?.status,
+        internalEmployeeId: employee?.employee_id_number,
+        city: employee?.city,
+        state: employee?.state,
+        country: employee?.country,
+        zip: employee?.zip,
 
         type: 'access',
         metadata: user.metadata,
@@ -195,13 +194,13 @@ export async function generateRefreshToken(user: User): Promise<string> {
         lastName: user.last_name || undefined,
         role: primaryRole,
         organizationId: user.organization_id,
-        employeeId: employee.id, // Add employeeId to the token
-        managerId: employee.managerId,
-        department: employee.department,
-        title: employee.title,
-        imageUrl: employee.avatar_url,
-        isActive: employee.status !== 'inactive' && employee.status !== 'terminated',
-        createdAt: employee.created_at,
+        employeeId: employee?.id, // Add employeeId to the token
+        managerId: employee?.managerId,
+        department: employee?.department,
+        title: employee?.title,
+        imageUrl: employee?.avatar_url,
+        isActive: employee?.status !== 'inactive' && employee?.status !== 'terminated',
+        createdAt: employee?.created_at,
         type: 'refresh',
     };
 
