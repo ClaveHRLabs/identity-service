@@ -1,4 +1,4 @@
-import db from './db';
+import { query as executeQuery } from './index';
 import { OrganizationSetupCode, CreateSetupCode } from '../models/schemas/organization';
 import { generateClaveSetupCode } from '../utils/code-generator';
 
@@ -15,7 +15,7 @@ export async function createSetupCode(data: CreateSetupCode): Promise<Organizati
     const expires_at = new Date();
     expires_at.setHours(expires_at.getHours() + expiration_hours);
 
-    const result = await db.query(
+    const result = await executeQuery(
         `INSERT INTO organization_setup_codes (
       organization_id, code, data, expires_at, created_by_admin
     ) VALUES ($1, $2, $3, $4, $5) 
@@ -30,7 +30,9 @@ export async function createSetupCode(data: CreateSetupCode): Promise<Organizati
  * Get setup code by code string
  */
 export async function getSetupCodeByCode(code: string): Promise<OrganizationSetupCode | null> {
-    const result = await db.query('SELECT * FROM organization_setup_codes WHERE code = $1', [code]);
+    const result = await executeQuery('SELECT * FROM organization_setup_codes WHERE code = $1', [
+        code,
+    ]);
 
     return result.rows[0] || null;
 }
@@ -51,7 +53,7 @@ export async function getSetupCodesByOrganization(
 
     query += ' ORDER BY created_at DESC';
 
-    const result = await db.query(query, params);
+    const result = await executeQuery(query, params);
     return result.rows;
 }
 
@@ -61,7 +63,7 @@ export async function getSetupCodesByOrganization(
 export async function markSetupCodeAsUsed(code: string): Promise<OrganizationSetupCode | null> {
     const now = new Date();
 
-    const result = await db.query(
+    const result = await executeQuery(
         `UPDATE organization_setup_codes 
      SET used = true, used_at = $1 
      WHERE code = $2 AND used = false 
@@ -76,7 +78,7 @@ export async function markSetupCodeAsUsed(code: string): Promise<OrganizationSet
  * Delete a setup code
  */
 export async function deleteSetupCode(id: string): Promise<boolean> {
-    const result = await db.query(
+    const result = await executeQuery(
         'DELETE FROM organization_setup_codes WHERE id = $1 RETURNING id',
         [id],
     );
@@ -90,7 +92,7 @@ export async function deleteSetupCode(id: string): Promise<boolean> {
 export async function cleanupExpiredSetupCodes(): Promise<number> {
     const now = new Date();
 
-    const result = await db.query(
+    const result = await executeQuery(
         `DELETE FROM organization_setup_codes 
      WHERE expires_at < $1 
      RETURNING id`,

@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../../utils/jwt';
 import { getUserById } from '../../db/user';
-import logger from '../../utils/logger';
+import { getDependency, SERVICE_NAMES } from '../../di';
+import { IdentityConfig } from '../../config/config';
+import { logger } from '@vspl/core';
 import { HttpError, HttpStatusCode } from '@vspl/core';
 
 // Add user property to Express Request
@@ -43,8 +45,11 @@ export const authMiddleware = async (
 
         const token = parts[1];
 
+        // Get config from DI container
+        const config = getDependency<IdentityConfig>(SERVICE_NAMES.CONFIG);
+
         // Verify the token
-        const payload = await verifyAccessToken(token);
+        const payload = await verifyAccessToken(token, config);
 
         // Set the user ID on the request
         req.userId = payload.sub;
@@ -82,8 +87,11 @@ export const optionalAuthenticate = async (
 
         const token = parts[1];
 
+        // Get config from DI container
+        const config = getDependency<IdentityConfig>(SERVICE_NAMES.CONFIG);
+
         // Verify the token
-        const payload = await verifyAccessToken(token);
+        const payload = await verifyAccessToken(token, config);
 
         // Set the user ID on the request
         req.userId = payload.sub;

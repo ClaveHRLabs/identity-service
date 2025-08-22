@@ -1,4 +1,4 @@
-import db from './db';
+import { query as executeQuery } from './index';
 import {
     Role,
     CreateRole,
@@ -11,7 +11,7 @@ import {
     AssignRole,
     AssignPermission,
 } from '../models/schemas/role';
-import { logger } from '../utils/logger';
+import { logger } from '@vspl/core';
 
 /**
  * Role Management Functions
@@ -19,7 +19,7 @@ import { logger } from '../utils/logger';
 
 // Create a new role
 export async function createRole(data: CreateRole): Promise<Role> {
-    const result = await db.query(
+    const result = await executeQuery(
         `INSERT INTO roles (name, description) 
          VALUES ($1, $2) 
          RETURNING *`,
@@ -31,13 +31,13 @@ export async function createRole(data: CreateRole): Promise<Role> {
 
 // Get role by ID
 export async function getRoleById(id: string): Promise<Role | null> {
-    const result = await db.query('SELECT * FROM roles WHERE id = $1', [id]);
+    const result = await executeQuery('SELECT * FROM roles WHERE id = $1', [id]);
     return result.rows[0] || null;
 }
 
 // Get role by name
 export async function getRoleByName(name: string): Promise<Role | null> {
-    const result = await db.query('SELECT * FROM roles WHERE name = $1', [name]);
+    const result = await executeQuery('SELECT * FROM roles WHERE name = $1', [name]);
     return result.rows[0] || null;
 }
 
@@ -71,7 +71,7 @@ export async function updateRole(id: string, data: UpdateRole): Promise<Role | n
     `;
 
     try {
-        const result = await db.query(query, values);
+        const result = await executeQuery(query, values);
         return result.rows[0] || null;
     } catch (error) {
         logger.error('Error updating role', { error, roleId: id });
@@ -81,13 +81,13 @@ export async function updateRole(id: string, data: UpdateRole): Promise<Role | n
 
 // Delete role
 export async function deleteRole(id: string): Promise<boolean> {
-    const result = await db.query('DELETE FROM roles WHERE id = $1 RETURNING id', [id]);
+    const result = await executeQuery('DELETE FROM roles WHERE id = $1 RETURNING id', [id]);
     return result.rowCount ? result.rowCount > 0 : false;
 }
 
 // List roles with pagination
 export async function getRoles(limit = 100, offset = 0): Promise<Role[]> {
-    const result = await db.query('SELECT * FROM roles ORDER BY name ASC LIMIT $1 OFFSET $2', [
+    const result = await executeQuery('SELECT * FROM roles ORDER BY name ASC LIMIT $1 OFFSET $2', [
         limit,
         offset,
     ]);
@@ -96,7 +96,7 @@ export async function getRoles(limit = 100, offset = 0): Promise<Role[]> {
 
 // Count total roles
 export async function countRoles(): Promise<number> {
-    const result = await db.query('SELECT COUNT(*) FROM roles');
+    const result = await executeQuery('SELECT COUNT(*) FROM roles');
     return parseInt(result.rows[0].count);
 }
 
@@ -106,7 +106,7 @@ export async function countRoles(): Promise<number> {
 
 // Create a new permission
 export async function createPermission(data: CreatePermission): Promise<Permission> {
-    const result = await db.query(
+    const result = await executeQuery(
         `INSERT INTO permissions (name, description) 
          VALUES ($1, $2) 
          RETURNING *`,
@@ -118,13 +118,13 @@ export async function createPermission(data: CreatePermission): Promise<Permissi
 
 // Get permission by ID
 export async function getPermissionById(id: string): Promise<Permission | null> {
-    const result = await db.query('SELECT * FROM permissions WHERE id = $1', [id]);
+    const result = await executeQuery('SELECT * FROM permissions WHERE id = $1', [id]);
     return result.rows[0] || null;
 }
 
 // Get permission by name
 export async function getPermissionByName(name: string): Promise<Permission | null> {
-    const result = await db.query('SELECT * FROM permissions WHERE name = $1', [name]);
+    const result = await executeQuery('SELECT * FROM permissions WHERE name = $1', [name]);
     return result.rows[0] || null;
 }
 
@@ -161,7 +161,7 @@ export async function updatePermission(
     `;
 
     try {
-        const result = await db.query(query, values);
+        const result = await executeQuery(query, values);
         return result.rows[0] || null;
     } catch (error) {
         logger.error('Error updating permission', { error, permissionId: id });
@@ -171,13 +171,13 @@ export async function updatePermission(
 
 // Delete permission
 export async function deletePermission(id: string): Promise<boolean> {
-    const result = await db.query('DELETE FROM permissions WHERE id = $1 RETURNING id', [id]);
+    const result = await executeQuery('DELETE FROM permissions WHERE id = $1 RETURNING id', [id]);
     return result.rowCount ? result.rowCount > 0 : false;
 }
 
 // List permissions with pagination
 export async function getPermissions(limit = 100, offset = 0): Promise<Permission[]> {
-    const result = await db.query(
+    const result = await executeQuery(
         'SELECT * FROM permissions ORDER BY name ASC LIMIT $1 OFFSET $2',
         [limit, offset],
     );
@@ -186,7 +186,7 @@ export async function getPermissions(limit = 100, offset = 0): Promise<Permissio
 
 // Count total permissions
 export async function countPermissions(): Promise<number> {
-    const result = await db.query('SELECT COUNT(*) FROM permissions');
+    const result = await executeQuery('SELECT COUNT(*) FROM permissions');
     return parseInt(result.rows[0].count);
 }
 
@@ -196,7 +196,7 @@ export async function countPermissions(): Promise<number> {
 
 // Assign role to user
 export async function assignRoleToUser(data: AssignRole): Promise<UserRole> {
-    const result = await db.query(
+    const result = await executeQuery(
         `INSERT INTO user_roles (user_id, role_id, organization_id) 
          VALUES ($1, $2, $3) 
          ON CONFLICT (user_id, role_id, organization_id) DO UPDATE 
@@ -206,7 +206,7 @@ export async function assignRoleToUser(data: AssignRole): Promise<UserRole> {
     );
 
     // update users table with the organization_id
-    const userResult = await db.query(`UPDATE users SET organization_id = $1 WHERE id = $2`, [
+    const userResult = await executeQuery(`UPDATE users SET organization_id = $1 WHERE id = $2`, [
         data.organization_id || null,
         data.user_id,
     ]);
@@ -226,7 +226,7 @@ export async function assignRoleToUserByName(
 ): Promise<UserRole | null> {
     try {
         // First get the role ID from the role name
-        const roleResult = await db.query('SELECT id FROM roles WHERE name = $1', [roleName]);
+        const roleResult = await executeQuery('SELECT id FROM roles WHERE name = $1', [roleName]);
 
         if (roleResult.rows.length === 0) {
             return null; // Role not found
@@ -235,7 +235,7 @@ export async function assignRoleToUserByName(
         const roleId = roleResult.rows[0].id;
 
         // Then assign the role using the role ID
-        const result = await db.query(
+        const result = await executeQuery(
             `INSERT INTO user_roles (user_id, role_id, organization_id) 
              VALUES ($1, $2, $3) 
              ON CONFLICT (user_id, role_id, organization_id) DO UPDATE 
@@ -245,10 +245,10 @@ export async function assignRoleToUserByName(
         );
 
         // update users table with the organization_id
-        const userResult = await db.query(`UPDATE users SET organization_id = $1 WHERE id = $2`, [
-            organizationId || null,
-            userId,
-        ]);
+        const userResult = await executeQuery(
+            `UPDATE users SET organization_id = $1 WHERE id = $2`,
+            [organizationId || null, userId],
+        );
 
         if (userResult.rowCount === 0) {
             throw new Error('Failed to update user organization_id');
@@ -279,7 +279,7 @@ export async function removeRoleFromUser(
 
     query += ' RETURNING user_id';
 
-    const result = await db.query(query, values);
+    const result = await executeQuery(query, values);
     return result.rowCount ? result.rowCount > 0 : false;
 }
 
@@ -324,7 +324,7 @@ export async function getUserRoles(
 
     query += ' ORDER BY r.name ASC';
 
-    const result = await db.query(query, values);
+    const result = await executeQuery(query, values);
 
     return result.rows.map((row) => ({
         role: {
@@ -362,7 +362,7 @@ export async function userHasRole(
         values.push(organizationId);
     }
 
-    const result = await db.query(query, values);
+    const result = await executeQuery(query, values);
     return result.rowCount ? result.rowCount > 0 : false;
 }
 
@@ -372,7 +372,7 @@ export async function userHasRole(
 
 // Assign permission to role
 export async function assignPermissionToRole(data: AssignPermission): Promise<RolePermission> {
-    const result = await db.query(
+    const result = await executeQuery(
         `INSERT INTO role_permissions (role_id, permission_id) 
          VALUES ($1, $2) 
          ON CONFLICT (role_id, permission_id) DO NOTHING 
@@ -388,7 +388,7 @@ export async function removePermissionFromRole(
     roleId: string,
     permissionId: string,
 ): Promise<boolean> {
-    const result = await db.query(
+    const result = await executeQuery(
         'DELETE FROM role_permissions WHERE role_id = $1 AND permission_id = $2 RETURNING role_id',
         [roleId, permissionId],
     );
@@ -397,7 +397,7 @@ export async function removePermissionFromRole(
 
 // Get role's permissions
 export async function getRolePermissions(roleId: string): Promise<Permission[]> {
-    const result = await db.query(
+    const result = await executeQuery(
         `SELECT p.* FROM permissions p
          JOIN role_permissions rp ON p.id = rp.permission_id
          WHERE rp.role_id = $1
@@ -426,7 +426,7 @@ export async function userHasPermission(
         values.push(organizationId);
     }
 
-    const result = await db.query(query, values);
+    const result = await executeQuery(query, values);
     return result.rowCount ? result.rowCount > 0 : false;
 }
 
@@ -437,7 +437,7 @@ export async function getRolesByNames(roleNames: string[]): Promise<Role[]> {
     const placeholders = roleNames.map((_, i) => `$${i + 1}`).join(',');
     const query = `SELECT * FROM roles WHERE name IN (${placeholders})`;
 
-    const result = await db.query(query, roleNames);
+    const result = await executeQuery(query, roleNames);
     return result.rows;
 }
 
@@ -454,6 +454,6 @@ export async function getPermissionsForRoles(roleIds: string[]): Promise<Permiss
         ORDER BY p.name ASC
     `;
 
-    const result = await db.query(query, roleIds);
+    const result = await executeQuery(query, roleIds);
     return result.rows;
 }

@@ -1,4 +1,4 @@
-import { logger } from '../utils/logger';
+import { logger } from '@vspl/core';
 import { RoleService } from './role.service';
 import { UserRole } from '@vspl/core';
 

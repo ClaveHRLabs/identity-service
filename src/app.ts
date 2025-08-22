@@ -1,17 +1,58 @@
-import { app, setupShutdown } from './dependencies';
-import { PORT, IS_DEVELOPMENT, SERVICE_NAME } from './config/config';
-import logger from './utils/logger';
+import { logger, setupGracefulShutdown, closePool } from '@vspl/core';
+import { initializeContainer, getDependency, SERVICE_NAMES } from './di';
+import { Express } from 'express';
+import { Pool } from 'pg';
+import { IdentityConfig } from './config/config';
 
 // Start the server
-const server = app.listen(PORT, () => {
-    logger.info(`${SERVICE_NAME} running on port ${PORT}`, {
-        port: PORT,
-        environment: IS_DEVELOPMENT ? 'development' : 'production',
-    });
-});
+async function startServer() {
+    try {
+        // Initialize dependency container
+        logger.info('Starting Identity Service...');
+        await initializeContainer();
 
-// Setup graceful shutdown handling
-setupShutdown(server);
+        // Get dependencies from container
+        const config = getDependency<IdentityConfig>(SERVICE_NAMES.CONFIG);
+        const app = getDependency<Express>(SERVICE_NAMES.EXPRESS_APP);
+        const dbPool = getDependency<Pool>(SERVICE_NAMES.DB_POOL);
+
+        // Start server
+        const server = app.listen(config.PORT, () => {
+            logger.info(`${config.SERVICE_NAME} started successfully`, {
+                port: config.PORT,
+                host: config.HOST || 'localhost',
+                environment: config.NODE_ENV,
+            });
+        });
+
+        // Setup graceful shutdown handling
+        setupGracefulShutdown(
+            [
+                async () => {
+                    server.close();
+                    logger.info('HTTP server closed');
+                },
+                async () => {
+                    await closePool(dbPool);
+                    logger.info('Database connections closed');
+                },
+            ],
+            {
+                timeout: 10000,
+                logger,
+                signals: ['SIGINT', 'SIGTERM'],
+                exit: true,
+                exitCode: 0,
+            },
+        );
+    } catch (error) {
+        logger.error('Failed to start server:', { error });
+        process.exit(1);
+    }
+}
+
+// Start the application
+startServer();
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {

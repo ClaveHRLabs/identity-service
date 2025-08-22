@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { OrganizationService } from '../../services/organization.service';
 import { RoleService } from '../../services/role.service';
-import { logger } from '../../utils/logger';
+import { logger, Measure } from '@vspl/core';
 import { ROLES } from '../../models/enums/constants';
 
 export class OrganizationController {
@@ -16,15 +16,14 @@ export class OrganizationController {
     /**
      * Create a new organization profile
      */
+    @Measure()
     async createOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const organizationData = req.body;
 
             // Pass setup code to service if available
-            const organization = await this.organizationService.createOrganizationProfile(
-                organizationData,
-                
-            );
+            const organization =
+                await this.organizationService.createOrganizationProfile(organizationData);
 
             res.status(201).json({
                 success: true,
@@ -39,6 +38,7 @@ export class OrganizationController {
     /**
      * Create a new organization and assign the current user as admin
      */
+    @Measure()
     async createOrganizationWithAdmin(
         req: Request,
         res: Response,
@@ -91,13 +91,11 @@ export class OrganizationController {
     /**
      * Get organization profile by ID
      */
+    @Measure()
     async getOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;
-            const organization = await this.organizationService.getOrganizationProfile(
-                id,
-                
-            );
+            const organization = await this.organizationService.getOrganizationProfile(id);
 
             if (!organization) {
                 res.status(404).json({
@@ -120,6 +118,7 @@ export class OrganizationController {
     /**
      * Update organization profile
      */
+    @Measure()
     async updateOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;
@@ -128,7 +127,6 @@ export class OrganizationController {
             const organization = await this.organizationService.updateOrganizationProfile(
                 id,
                 updateData,
-                
             );
 
             if (!organization) {
@@ -152,6 +150,7 @@ export class OrganizationController {
     /**
      * Update organization branding (logo and colors)
      */
+    @Measure()
     async updateOrganizationBranding(
         req: Request,
         res: Response,
@@ -171,7 +170,6 @@ export class OrganizationController {
             const organization = await this.organizationService.updateOrganizationProfile(
                 id,
                 updateData,
-                
             );
 
             if (!organization) {
@@ -195,6 +193,7 @@ export class OrganizationController {
     /**
      * Complete organization setup process
      */
+    @Measure()
     async completeOrganizationSetup(
         req: Request,
         res: Response,
@@ -204,10 +203,7 @@ export class OrganizationController {
             const { id } = req.params;
 
             // Verify organization exists
-            const organization = await this.organizationService.getOrganizationProfile(
-                id,
-                
-            );
+            const organization = await this.organizationService.getOrganizationProfile(id);
 
             if (!organization) {
                 res.status(404).json({
@@ -224,19 +220,15 @@ export class OrganizationController {
             // - Sending welcome emails
             // - Creating default resources
 
-            const updatedOrg = await this.organizationService.updateOrganizationProfile(
-                id,
-                {
-                    status: 'active',
-                    // Store setup completion info in the config field which is JSONB
-                    config: {
-                        ...organization.config,
-                        setup_completed: true,
-                        setup_completed_at: new Date().toISOString(),
-                    },
+            const updatedOrg = await this.organizationService.updateOrganizationProfile(id, {
+                status: 'active',
+                // Store setup completion info in the config field which is JSONB
+                config: {
+                    ...organization.config,
+                    setup_completed: true,
+                    setup_completed_at: new Date().toISOString(),
                 },
-                
-            );
+            });
 
             if (!updatedOrg) {
                 res.status(500).json({
@@ -264,13 +256,11 @@ export class OrganizationController {
     /**
      * Delete organization profile
      */
+    @Measure()
     async deleteOrganization(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;
-            const deleted = await this.organizationService.deleteOrganizationProfile(
-                id,
-                
-            );
+            const deleted = await this.organizationService.deleteOrganizationProfile(id);
 
             if (!deleted) {
                 res.status(404).json({
@@ -293,6 +283,7 @@ export class OrganizationController {
     /**
      * List organization profiles with optional filtering
      */
+    @Measure()
     async listOrganizations(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { status, subscription_tier, limit = '100', offset = '0' } = req.query;
@@ -304,7 +295,7 @@ export class OrganizationController {
             const result = await this.organizationService.getOrganizationProfiles(
                 filters,
                 Number(limit),
-                Number(offset)
+                Number(offset),
             );
 
             res.status(200).json({

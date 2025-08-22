@@ -1,41 +1,21 @@
-import logger from '../utils/logger';
+import { logger, HttpError, HttpStatusCode, HttpClient, Measure } from '@vspl/core';
 import * as authProviderRepository from '../db/auth-provider';
 import * as magicLinkRepository from '../db/magic-link';
 import * as refreshTokenRepository from '../db/refresh-token';
 import { User } from '../models/schemas/user';
-import { HttpError, HttpStatusCode, HttpClient, createHttpClient } from '@vspl/core';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
-import {
-    GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET,
-    MICROSOFT_CLIENT_ID,
-    MICROSOFT_CLIENT_SECRET,
-    LINKEDIN_CLIENT_ID,
-    LINKEDIN_CLIENT_SECRET,
-    FRONTEND_URL,
-} from '../config/config';
-import { OAUTH_URLS, AUTH, TOKEN, TIMEOUTS, HTTP_CLIENT } from '../constants/app.constants';
+import { OAUTH_URLS, TOKEN } from '../constants/app.constants';
+import { UserService } from './user.service';
+import { EmailService } from './email.service';
+import { IdentityConfig } from '../config/config';
 
 export class AuthService {
-    private readonly userService;
-    private readonly emailService;
-    private readonly httpClient: HttpClient;
-
-    constructor(userService: any, emailService: any) {
-        this.userService = userService;
-        this.emailService = emailService;
-
-        // Create HTTP client for external API calls
-        this.httpClient = createHttpClient({
-            baseUrl: '', // Will be overridden per request
-            timeout: TIMEOUTS.DEFAULT_HTTP_TIMEOUT_MS,
-            retryOptions: {
-                maxRetries: HTTP_CLIENT.MAX_RETRIES,
-                baseDelay: HTTP_CLIENT.BASE_DELAY_MS,
-                exponentialBackoff: HTTP_CLIENT.EXPONENTIAL_BACKOFF,
-            },
-        });
-    }
+    constructor(
+        private readonly userService: UserService,
+        private readonly emailService: EmailService,
+        private readonly httpClient: HttpClient,
+        private readonly config: IdentityConfig,
+    ) {}
 
     /**
      * Common method for OAuth authentication
@@ -71,8 +51,8 @@ export class AuthService {
             if (providerType === 'google') {
                 tokenUrl = OAUTH_URLS.GOOGLE.TOKEN;
                 userInfoUrl = OAUTH_URLS.GOOGLE.USER_INFO;
-                clientId = GOOGLE_CLIENT_ID || '';
-                clientSecret = GOOGLE_CLIENT_SECRET || '';
+                clientId = this.config.GOOGLE_CLIENT_ID || '';
+                clientSecret = this.config.GOOGLE_CLIENT_SECRET || '';
                 tokenRequestData = {
                     code,
                     client_id: clientId,
@@ -83,8 +63,8 @@ export class AuthService {
             } else if (providerType === 'microsoft') {
                 tokenUrl = OAUTH_URLS.MICROSOFT.TOKEN;
                 userInfoUrl = OAUTH_URLS.MICROSOFT.USER_INFO;
-                clientId = MICROSOFT_CLIENT_ID || '';
-                clientSecret = MICROSOFT_CLIENT_SECRET || '';
+                clientId = this.config.MICROSOFT_CLIENT_ID || '';
+                clientSecret = this.config.MICROSOFT_CLIENT_SECRET || '';
                 tokenRequestData = {
                     code,
                     client_id: clientId,
@@ -96,8 +76,8 @@ export class AuthService {
             } else if (providerType === 'linkedin') {
                 tokenUrl = OAUTH_URLS.LINKEDIN.TOKEN;
                 userInfoUrl = OAUTH_URLS.LINKEDIN.USER_INFO;
-                clientId = LINKEDIN_CLIENT_ID || '';
-                clientSecret = LINKEDIN_CLIENT_SECRET || '';
+                clientId = this.config.LINKEDIN_CLIENT_ID || '';
+                clientSecret = this.config.LINKEDIN_CLIENT_SECRET || '';
                 tokenRequestData = {
                     code,
                     client_id: clientId,
@@ -166,7 +146,9 @@ export class AuthService {
                 displayName = (userInfoResponse as any).name;
                 picture = (userInfoResponse as any).picture;
             } else if (providerType === 'microsoft') {
-                email = (userInfoResponse as any).data.mail || (userInfoResponse as any).data.userPrincipalName;
+                email =
+                    (userInfoResponse as any).data.mail ||
+                    (userInfoResponse as any).data.userPrincipalName;
                 firstName = (userInfoResponse as any).data.givenName;
                 lastName = (userInfoResponse as any).data.surname;
                 displayName = (userInfoResponse as any).data.displayName;
@@ -189,7 +171,7 @@ export class AuthService {
 
             // Find or create user
             let user = await this.userService.getUserByEmail(email);
-            
+
             if (!user) {
                 // Create a new user if none exists with this email
                 user = await this.userService.createUser({
@@ -197,8 +179,7 @@ export class AuthService {
                     first_name: firstName || '',
                     last_name: lastName || '',
                     display_name: displayName,
-                    picture_url: picture,
-                    status: 'active',
+                    avatar_url: picture,
                 });
             }
 
@@ -215,15 +196,14 @@ export class AuthService {
             });
 
             // Generate our own access and refresh tokens
-            const access_token = await generateAccessToken(user);
-            const refresh_token = await generateRefreshToken(user);
+            const access_token = await generateAccessToken(user, this.config);
+            const refresh_token = await generateRefreshToken(user, this.config);
 
             // Save refresh token
             await refreshTokenRepository.createRefreshToken({
                 user_id: user.id,
                 token: refresh_token,
                 expiration_days: 7,
-
             });
 
             return { user, access_token, refresh_token };
@@ -252,15 +232,15 @@ export class AuthService {
         let scope = '';
 
         if (provider === 'google') {
-            clientId = GOOGLE_CLIENT_ID || '';
+            clientId = this.config.GOOGLE_CLIENT_ID || '';
             authUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
             scope = 'openid profile email';
         } else if (provider === 'microsoft') {
-            clientId = MICROSOFT_CLIENT_ID || '';
+            clientId = this.config.MICROSOFT_CLIENT_ID || '';
             authUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
             scope = 'openid profile email User.Read';
         } else if (provider === 'linkedin') {
-            clientId = LINKEDIN_CLIENT_ID || '';
+            clientId = this.config.LINKEDIN_CLIENT_ID || '';
             authUrl = 'https://www.linkedin.com/oauth/v2/authorization';
             scope = 'openid profile email';
         }
@@ -291,6 +271,8 @@ export class AuthService {
     /**
      * Authenticate with Google OAuth
      */
+
+    @Measure()
     async authenticateWithGoogle(
         code: string,
         redirectUri: string,
@@ -306,6 +288,8 @@ export class AuthService {
     /**
      * Authenticate with Microsoft OAuth
      */
+
+    @Measure()
     async authenticateWithMicrosoft(
         code: string,
         redirectUri: string,
@@ -321,6 +305,8 @@ export class AuthService {
     /**
      * Authenticate with LinkedIn OAuth
      */
+
+    @Measure()
     async authenticateWithLinkedIn(
         code: string,
         redirectUri: string,
@@ -336,52 +322,47 @@ export class AuthService {
     /**
      * Send magic link to user's email
      */
+
+    @Measure()
     async sendMagicLink(email: string, redirectUri: string): Promise<boolean> {
-        try {
-            logger.info('Sending magic link to user', { email, redirectUri });
+        logger.info('Sending magic link to user', { email, redirectUri });
 
-            // Check if user exists
-            let user = await this.userService.getUserByEmail(email);
+        // Check if user exists
+        let user = await this.userService.getUserByEmail(email);
 
-            // Create user if not exists (simplified onboarding)
-            if (!user) {
-                logger.info('Creating new user for magic link', { email });
-                user = await this.userService.createUser({
-                    email,
-                    status: 'active',
-                });
-            }
-
-            // Save token
-            const magicLink = await magicLinkRepository.createMagicLink({
-                email: user.email,
-                expiration_minutes: TOKEN.MAGIC_LINK_EXPIRATION_MINUTES,
-                metadata: {
-                    redirect_uri: redirectUri,
-                }
-            });
-
-            // Generate magic link URL
-            const magicLinkUrl = `${FRONTEND_URL}/verify-email?token=${magicLink.token}`;
-
-            logger.info(`Generated magic link URL for ${email}: ${magicLinkUrl}`);
-
-            // Send email with magic link
-            await this.emailService.sendMagicLinkEmail(email, magicLinkUrl);
-
-            return true;
-        } catch (error) {
-            logger.error('Error sending magic link', {
-                error: error instanceof Error ? error.message : 'Unknown error',
+        // Create user if not exists (simplified onboarding)
+        if (!user) {
+            logger.info('Creating new user for magic link', { email });
+            user = await this.userService.createUser({
                 email,
             });
-            throw error;
         }
+
+        // Save token
+        const magicLink = await magicLinkRepository.createMagicLink({
+            email: user.email,
+            expiration_minutes: TOKEN.MAGIC_LINK_EXPIRATION_MINUTES,
+            metadata: {
+                redirect_uri: redirectUri,
+            },
+        });
+
+        // Generate magic link URL
+        const magicLinkUrl = `${this.config.FRONTEND_URL}/verify-email?token=${magicLink.token}`;
+
+        logger.info(`Generated magic link URL for ${email}: ${magicLinkUrl}`);
+
+        // Send email with magic link
+        await this.emailService.sendMagicLinkEmail(email, magicLinkUrl);
+
+        return true;
     }
 
     /**
      * Verify magic link token
      */
+
+    @Measure()
     async verifyMagicLink(token: string): Promise<{
         success: boolean;
         message?: string;
@@ -440,15 +421,14 @@ export class AuthService {
             await magicLinkRepository.markMagicLinkAsUsed(token);
 
             // Generate access and refresh tokens
-            const access_token = await generateAccessToken(user);
-            const refresh_token = await generateRefreshToken(user);
+            const access_token = await generateAccessToken(user, this.config);
+            const refresh_token = await generateRefreshToken(user, this.config);
 
             // Save refresh token
             await refreshTokenRepository.createRefreshToken({
                 user_id: user.id,
                 token: refresh_token,
                 expiration_days: 7,
-
             });
 
             return {
@@ -481,7 +461,7 @@ export class AuthService {
             // Verify refresh token
             let payload: any;
             try {
-                payload = await verifyRefreshToken(refreshToken);
+                payload = await verifyRefreshToken(refreshToken, this.config);
             } catch (error) {
                 logger.warn('Invalid refresh token', {
                     error: error instanceof Error ? error.message : 'Unknown error',
@@ -522,7 +502,7 @@ export class AuthService {
             }
 
             // Generate new access token
-            const access_token = await generateAccessToken(user);
+            const access_token = await generateAccessToken(user, this.config);
 
             return {
                 success: true,
@@ -540,32 +520,17 @@ export class AuthService {
      * Revoke refresh token
      */
     async revokeRefreshToken(refreshToken: string): Promise<boolean> {
-        try {
-            logger.info('Revoking refresh token');
-            const result = await refreshTokenRepository.revokeRefreshToken(refreshToken);
-            return result !== null;
-        } catch (error) {
-            logger.error('Error revoking refresh token', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-            });
-            throw error;
-        }
+        logger.info('Revoking refresh token');
+        const result = await refreshTokenRepository.revokeRefreshToken(refreshToken);
+        return result !== null;
     }
 
     /**
      * Revoke all refresh tokens for a user
      */
     async revokeAllUserTokens(userId: string): Promise<boolean> {
-        try {
-            logger.info('Revoking all refresh tokens for user', { userId });
-            const count = await refreshTokenRepository.revokeAllUserRefreshTokens(userId);
-            return count > 0;
-        } catch (error) {
-            logger.error('Error revoking all user refresh tokens', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                userId,
-            });
-            throw error;
-        }
+        logger.info('Revoking all refresh tokens for user', { userId });
+        const count = await refreshTokenRepository.revokeAllUserRefreshTokens(userId);
+        return count > 0;
     }
 }

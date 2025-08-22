@@ -1,6 +1,6 @@
-import db from './db';
+import { query } from './index';
 import { MagicLink, CreateMagicLink } from '../models/schemas/user';
-import { generateToken } from '../utils/token-generator';
+import { generateToken } from '@vspl/core';
 
 /**
  * Create a new magic link
@@ -14,7 +14,7 @@ export async function createMagicLink(data: CreateMagicLink): Promise<MagicLink>
     const expires_at = new Date();
     expires_at.setMinutes(expires_at.getMinutes() + expirationMinutes);
 
-    const result = await db.query(
+    const result = await query(
         `INSERT INTO magic_links (
             email, token, expires_at, metadata
         ) VALUES ($1, $2, $3, $4)
@@ -29,7 +29,7 @@ export async function createMagicLink(data: CreateMagicLink): Promise<MagicLink>
  * Get magic link by token
  */
 export async function getMagicLinkByToken(token: string): Promise<MagicLink | null> {
-    const result = await db.query('SELECT * FROM magic_links WHERE token = $1', [token]);
+    const result = await query('SELECT * FROM magic_links WHERE token = $1', [token]);
     return result.rows[0] || null;
 }
 
@@ -37,7 +37,7 @@ export async function getMagicLinkByToken(token: string): Promise<MagicLink | nu
  * Get magic links by email
  */
 export async function getMagicLinksByEmail(email: string): Promise<MagicLink[]> {
-    const result = await db.query(
+    const result = await query(
         'SELECT * FROM magic_links WHERE email = $1 ORDER BY created_at DESC',
         [email],
     );
@@ -49,7 +49,7 @@ export async function getMagicLinksByEmail(email: string): Promise<MagicLink[]> 
  */
 export async function markMagicLinkAsUsed(id: string): Promise<MagicLink | null> {
     const now = new Date();
-    const result = await db.query(
+    const result = await query(
         `UPDATE magic_links 
          SET used = true, used_at = $1 
          WHERE id = $2 
@@ -91,7 +91,7 @@ export async function validateMagicLink(token: string): Promise<{
 export async function cleanupMagicLinks(): Promise<number> {
     const now = new Date();
 
-    const result = await db.query(
+    const result = await query(
         `DELETE FROM magic_links 
          WHERE expires_at < $1 OR used = true 
          RETURNING id`,

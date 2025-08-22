@@ -1,21 +1,19 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../../services/auth.service';
-import { CatchErrors, Measure, HttpStatusCode } from '@vspl/core';
-import logger from '../../utils/logger';
-import { Config } from '../../config/config';
+import { Measure, HttpStatusCode, logger } from '@vspl/core';
 import { AUTH } from '../../constants/app.constants';
+import { IdentityConfig } from '../../config/config';
 
 export class AuthController {
-    private readonly authService: AuthService;
-
-    constructor(authService: AuthService) {
-        this.authService = authService;
-    }
+    constructor(
+        private readonly authService: AuthService,
+        private readonly config: IdentityConfig,
+    ) {}
 
     /**
      * Initiate Google OAuth flow by generating the authorization URL
      */
-    @CatchErrors()
+    @Measure()
     async initiateGoogleAuth(req: Request, res: Response): Promise<void> {
         const { redirect_uri, state_data } = req.query;
 
@@ -27,7 +25,9 @@ export class AuthController {
             stateParam = Buffer.from(JSON.stringify(state_data)).toString('base64');
         } else {
             // Otherwise generate a random state parameter
-            stateParam = Buffer.from(Math.random().toString(36).substring(AUTH.STATE_PARAM_LENGTH)).toString('base64');
+            stateParam = Buffer.from(
+                Math.random().toString(36).substring(AUTH.STATE_PARAM_LENGTH),
+            ).toString('base64');
         }
 
         const authUrl = this.authService.getOAuthAuthorizationUrl(
@@ -48,7 +48,7 @@ export class AuthController {
     /**
      * Initiate Microsoft OAuth flow by generating the authorization URL
      */
-    @CatchErrors()
+    @Measure()
     async initiateMicrosoftAuth(req: Request, res: Response): Promise<void> {
         const { redirect_uri, state_data } = req.query;
 
@@ -60,7 +60,9 @@ export class AuthController {
             stateParam = Buffer.from(JSON.stringify(state_data)).toString('base64');
         } else {
             // Otherwise generate a random state parameter
-            stateParam = Buffer.from(Math.random().toString(36).substring(AUTH.STATE_PARAM_LENGTH)).toString('base64');
+            stateParam = Buffer.from(
+                Math.random().toString(36).substring(AUTH.STATE_PARAM_LENGTH),
+            ).toString('base64');
         }
 
         const authUrl = this.authService.getOAuthAuthorizationUrl(
@@ -81,7 +83,7 @@ export class AuthController {
     /**
      * Authenticate with Google OAuth
      */
-    @CatchErrors()
+
     @Measure()
     async googleAuth(req: Request, res: Response): Promise<void> {
         const { code, redirect_uri, state } = req.body;
@@ -96,7 +98,7 @@ export class AuthController {
     /**
      * Authenticate with Microsoft OAuth
      */
-    @CatchErrors()
+
     @Measure()
     async microsoftAuth(req: Request, res: Response): Promise<void> {
         const { code, redirect_uri, state } = req.body;
@@ -111,7 +113,7 @@ export class AuthController {
     /**
      * Send a magic link to the user's email
      */
-    @CatchErrors()
+
     @Measure()
     async sendMagicLink(req: Request, res: Response): Promise<void> {
         const { email, redirect_uri } = req.body;
@@ -126,7 +128,7 @@ export class AuthController {
     /**
      * Verify a magic link token and authenticate the user
      */
-    @CatchErrors()
+
     @Measure()
     async verifyMagicLink(req: Request, res: Response): Promise<void> {
         const { token } = req.body;
@@ -158,7 +160,7 @@ export class AuthController {
     /**
      * Refresh the access token using a refresh token
      */
-    @CatchErrors()
+
     @Measure()
     async refreshToken(req: Request, res: Response): Promise<void> {
         const { refresh_token } = req.body;
@@ -183,7 +185,7 @@ export class AuthController {
     /**
      * Logout the user by revoking their refresh token
      */
-    @CatchErrors()
+
     @Measure()
     async logout(req: Request, res: Response): Promise<void> {
         const { refresh_token } = req.body;
@@ -205,7 +207,7 @@ export class AuthController {
     /**
      * Initiate LinkedIn OAuth flow by generating the authorization URL
      */
-    @CatchErrors()
+
     async initiateLinkedInAuth(req: Request, res: Response): Promise<void> {
         const { redirect_uri, state_data } = req.query;
 
@@ -217,7 +219,9 @@ export class AuthController {
             stateParam = Buffer.from(JSON.stringify(state_data)).toString('base64');
         } else {
             // Otherwise generate a random state parameter
-            stateParam = Buffer.from(Math.random().toString(36).substring(AUTH.STATE_PARAM_LENGTH)).toString('base64');
+            stateParam = Buffer.from(
+                Math.random().toString(36).substring(AUTH.STATE_PARAM_LENGTH),
+            ).toString('base64');
         }
 
         const authUrl = this.authService.getOAuthAuthorizationUrl(
@@ -238,7 +242,7 @@ export class AuthController {
     /**
      * Authenticate with LinkedIn OAuth
      */
-    @CatchErrors()
+
     @Measure()
     async linkedInAuth(req: Request, res: Response): Promise<void> {
         const { code, redirect_uri, state } = req.body;
@@ -279,10 +283,10 @@ export class AuthController {
     /**
      * Debug endpoint for LinkedIn configuration (only available in development)
      */
-    @CatchErrors()
+    @Measure()
     async debugLinkedInConfig(req: Request, res: Response): Promise<void> {
         // Only allow this in development environment
-        if (!Config.IS_DEVELOPMENT) {
+        if (!this.config.IS_DEVELOPMENT) {
             res.status(HttpStatusCode.NOT_FOUND).json({
                 success: false,
                 message: 'Not found',
@@ -292,10 +296,10 @@ export class AuthController {
 
         // Check if LinkedIn is properly configured
         const configInfo = {
-            clientIdConfigured: !!Config.LINKEDIN_CLIENT_ID,
-            clientSecretConfigured: !!Config.LINKEDIN_CLIENT_SECRET,
-            nodeEnv: Config.NODE_ENV,
-            frontendUrl: Config.FRONTEND_URL,
+            clientIdConfigured: !!this.config.LINKEDIN_CLIENT_ID,
+            clientSecretConfigured: !!this.config.LINKEDIN_CLIENT_SECRET,
+            nodeEnv: this.config.NODE_ENV,
+            frontendUrl: this.config.FRONTEND_URL,
         };
 
         res.status(HttpStatusCode.OK).json({

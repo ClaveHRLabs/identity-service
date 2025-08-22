@@ -1,11 +1,11 @@
-import db from './db';
+import { query } from './index';
 import { AuthProvider, CreateAuthProvider } from '../models/schemas/user';
 
 /**
  * Create a new authentication provider
  */
 export async function createAuthProvider(data: CreateAuthProvider): Promise<AuthProvider> {
-    const result = await db.query(
+    const result = await query(
         `INSERT INTO auth_providers (
             user_id, provider_type, provider_user_id, email, 
             access_token, refresh_token, token_expires_at, metadata
@@ -39,7 +39,7 @@ export async function getAuthProviderByUserAndType(
     userId: string,
     providerType: string,
 ): Promise<AuthProvider | null> {
-    const result = await db.query(
+    const result = await query(
         'SELECT * FROM auth_providers WHERE user_id = $1 AND provider_type = $2',
         [userId, providerType],
     );
@@ -53,7 +53,7 @@ export async function getAuthProviderByEmailAndType(
     email: string,
     providerType: string,
 ): Promise<AuthProvider | null> {
-    const result = await db.query(
+    const result = await query(
         'SELECT * FROM auth_providers WHERE email = $1 AND provider_type = $2',
         [email, providerType],
     );
@@ -67,7 +67,7 @@ export async function getAuthProviderByProviderUserId(
     providerType: string,
     providerUserId: string,
 ): Promise<AuthProvider | null> {
-    const result = await db.query(
+    const result = await query(
         'SELECT * FROM auth_providers WHERE provider_type = $1 AND provider_user_id = $2',
         [providerType, providerUserId],
     );
@@ -78,7 +78,7 @@ export async function getAuthProviderByProviderUserId(
  * Get all auth providers for a user
  */
 export async function getAuthProvidersByUserId(userId: string): Promise<AuthProvider[]> {
-    const result = await db.query('SELECT * FROM auth_providers WHERE user_id = $1', [userId]);
+    const result = await query('SELECT * FROM auth_providers WHERE user_id = $1', [userId]);
     return result.rows;
 }
 
@@ -91,7 +91,7 @@ export async function updateAuthProviderTokens(
     refreshToken: string | null,
     expiresAt: Date | null,
 ): Promise<AuthProvider | null> {
-    const result = await db.query(
+    const result = await query(
         `UPDATE auth_providers 
          SET access_token = $1, refresh_token = $2, token_expires_at = $3 
          WHERE id = $4 
@@ -105,7 +105,7 @@ export async function updateAuthProviderTokens(
  * Delete auth provider
  */
 export async function deleteAuthProvider(id: string): Promise<boolean> {
-    const result = await db.query('DELETE FROM auth_providers WHERE id = $1 RETURNING id', [id]);
+    const result = await query('DELETE FROM auth_providers WHERE id = $1 RETURNING id', [id]);
     return result.rowCount ? result.rowCount > 0 : false;
 }
 
@@ -113,7 +113,7 @@ export async function deleteAuthProvider(id: string): Promise<boolean> {
  * Delete all auth providers for a user
  */
 export async function deleteAuthProvidersByUserId(userId: string): Promise<number> {
-    const result = await db.query('DELETE FROM auth_providers WHERE user_id = $1 RETURNING id', [
+    const result = await query('DELETE FROM auth_providers WHERE user_id = $1 RETURNING id', [
         userId,
     ]);
     return result.rowCount || 0;

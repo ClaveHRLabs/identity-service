@@ -1,4 +1,4 @@
-import logger from '../utils/logger';
+import { logger } from '@vspl/core';
 import * as roleRepository from '../db/role';
 import {
     Role,
@@ -10,9 +10,9 @@ import {
     UserRole,
     RolePermission,
     AssignRole,
-    AssignPermission
+    AssignPermission,
 } from '../models/schemas/role';
-import { HttpError, HttpStatusCode, CatchErrors, Measure } from '@vspl/core';
+import { HttpError, HttpStatusCode, Measure } from '@vspl/core';
 
 export class RoleService {
     /**
@@ -20,7 +20,7 @@ export class RoleService {
      */
 
     // Create a new role
-    @CatchErrors()
+
     @Measure()
     async createRole(roleData: CreateRole): Promise<Role> {
         logger.info('Creating new role', { name: roleData.name });
@@ -38,14 +38,14 @@ export class RoleService {
     }
 
     // Get role by ID
-    @CatchErrors()
+
     async getRoleById(id: string): Promise<Role | null> {
         logger.debug('Fetching role by ID', { id });
         return roleRepository.getRoleById(id);
     }
 
     // Get role by name
-    @CatchErrors()
+
     async getRoleByName(name: string): Promise<Role | null> {
         logger.debug('Fetching role by name', { name });
         return roleRepository.getRoleByName(name);
@@ -67,7 +67,10 @@ export class RoleService {
             if (updateData.name && updateData.name !== existingRole.name) {
                 const nameExists = await roleRepository.getRoleByName(updateData.name);
                 if (nameExists) {
-                    logger.warn('Failed to update role - name already in use', { id, name: updateData.name });
+                    logger.warn('Failed to update role - name already in use', {
+                        id,
+                        name: updateData.name,
+                    });
                     throw new HttpError(HttpStatusCode.CONFLICT, 'Role name already in use');
                 }
             }
@@ -82,7 +85,7 @@ export class RoleService {
 
             logger.error('Failed to update role', {
                 error: error instanceof Error ? error.message : 'Unknown error',
-                id
+                id,
             });
             throw error;
         }
@@ -105,29 +108,26 @@ export class RoleService {
         } catch (error) {
             logger.error('Failed to delete role', {
                 error: error instanceof Error ? error.message : 'Unknown error',
-                id
+                id,
             });
             throw error;
         }
     }
 
     // Get roles with pagination
-    async getRoles(
-        limit = 100,
-        offset = 0
-    ): Promise<{ roles: Role[]; total: number }> {
+    async getRoles(limit = 100, offset = 0): Promise<{ roles: Role[]; total: number }> {
         logger.debug('Fetching roles with pagination', { limit, offset });
 
         try {
             const [roles, total] = await Promise.all([
                 roleRepository.getRoles(limit, offset),
-                roleRepository.countRoles()
+                roleRepository.countRoles(),
             ]);
 
             return { roles, total };
         } catch (error) {
             logger.error('Failed to fetch roles', {
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: error instanceof Error ? error.message : 'Unknown error',
             });
             throw error;
         }
@@ -143,14 +143,24 @@ export class RoleService {
 
         try {
             // Check if permission with this name already exists
-            const existingPermission = await roleRepository.getPermissionByName(permissionData.name);
+            const existingPermission = await roleRepository.getPermissionByName(
+                permissionData.name,
+            );
             if (existingPermission) {
-                logger.warn('Failed to create permission - name already exists', { name: permissionData.name });
-                throw new HttpError(HttpStatusCode.CONFLICT, 'Permission with this name already exists');
+                logger.warn('Failed to create permission - name already exists', {
+                    name: permissionData.name,
+                });
+                throw new HttpError(
+                    HttpStatusCode.CONFLICT,
+                    'Permission with this name already exists',
+                );
             }
 
             const newPermission = await roleRepository.createPermission(permissionData);
-            logger.info('Permission created successfully', { id: newPermission.id, name: newPermission.name });
+            logger.info('Permission created successfully', {
+                id: newPermission.id,
+                name: newPermission.name,
+            });
             return newPermission;
         } catch (error) {
             if (error instanceof HttpError) {
@@ -159,7 +169,7 @@ export class RoleService {
 
             logger.error('Failed to create permission', {
                 error: error instanceof Error ? error.message : 'Unknown error',
-                name: permissionData.name
+                name: permissionData.name,
             });
             throw error;
         }
@@ -193,7 +203,10 @@ export class RoleService {
             if (updateData.name && updateData.name !== existingPermission.name) {
                 const nameExists = await roleRepository.getPermissionByName(updateData.name);
                 if (nameExists) {
-                    logger.warn('Failed to update permission - name already in use', { id, name: updateData.name });
+                    logger.warn('Failed to update permission - name already in use', {
+                        id,
+                        name: updateData.name,
+                    });
                     throw new HttpError(HttpStatusCode.CONFLICT, 'Permission name already in use');
                 }
             }
@@ -208,7 +221,7 @@ export class RoleService {
 
             logger.error('Failed to update permission', {
                 error: error instanceof Error ? error.message : 'Unknown error',
-                id
+                id,
             });
             throw error;
         }
@@ -231,7 +244,7 @@ export class RoleService {
         } catch (error) {
             logger.error('Failed to delete permission', {
                 error: error instanceof Error ? error.message : 'Unknown error',
-                id
+                id,
             });
             throw error;
         }
@@ -240,20 +253,20 @@ export class RoleService {
     // Get permissions with pagination
     async getPermissions(
         limit = 100,
-        offset = 0
+        offset = 0,
     ): Promise<{ permissions: Permission[]; total: number }> {
         logger.debug('Fetching permissions with pagination', { limit, offset });
 
         try {
             const [permissions, total] = await Promise.all([
                 roleRepository.getPermissions(limit, offset),
-                roleRepository.countPermissions()
+                roleRepository.countPermissions(),
             ]);
 
             return { permissions, total };
         } catch (error) {
             logger.error('Failed to fetch permissions', {
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: error instanceof Error ? error.message : 'Unknown error',
             });
             throw error;
         }
@@ -268,7 +281,7 @@ export class RoleService {
         logger.info('Assigning role to user', {
             userId: assignData.user_id,
             roleId: assignData.role_id,
-            organizationId: assignData.organization_id
+            organizationId: assignData.organization_id,
         });
 
         try {
@@ -277,18 +290,22 @@ export class RoleService {
             logger.error('Failed to assign role to user', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 userId: assignData.user_id,
-                roleId: assignData.role_id
+                roleId: assignData.role_id,
             });
             throw error;
         }
     }
 
     // Assign role to user by role name
-    async assignRoleToUserByName(userId: string, roleName: string, organizationId?: string): Promise<UserRole | null> {
+    async assignRoleToUserByName(
+        userId: string,
+        roleName: string,
+        organizationId?: string,
+    ): Promise<UserRole | null> {
         logger.info('Assigning role to user by name', {
             userId,
             roleName,
-            organizationId
+            organizationId,
         });
 
         try {
@@ -303,7 +320,7 @@ export class RoleService {
             const assignData: AssignRole = {
                 user_id: userId,
                 role_id: role.id,
-                organization_id: organizationId
+                organization_id: organizationId,
             };
 
             // Assign the role
@@ -312,18 +329,22 @@ export class RoleService {
             logger.error('Failed to assign role to user by name', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 userId,
-                roleName
+                roleName,
             });
             throw error;
         }
     }
 
     // Remove role from user
-    async removeRoleFromUser(userId: string, roleId: string, organizationId?: string): Promise<boolean> {
+    async removeRoleFromUser(
+        userId: string,
+        roleId: string,
+        organizationId?: string,
+    ): Promise<boolean> {
         logger.info('Removing role from user', {
             userId,
             roleId,
-            organizationId
+            organizationId,
         });
 
         try {
@@ -332,18 +353,22 @@ export class RoleService {
             logger.error('Failed to remove role from user', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 userId,
-                roleId
+                roleId,
             });
             throw error;
         }
     }
 
     // Remove role from user by name
-    async removeRoleFromUserByName(userId: string, roleName: string, organizationId?: string): Promise<boolean> {
+    async removeRoleFromUserByName(
+        userId: string,
+        roleName: string,
+        organizationId?: string,
+    ): Promise<boolean> {
         logger.info('Removing role from user by name', {
             userId,
             roleName,
-            organizationId
+            organizationId,
         });
 
         try {
@@ -352,14 +377,17 @@ export class RoleService {
             logger.error('Failed to remove role from user by name', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 userId,
-                roleName
+                roleName,
             });
             throw error;
         }
     }
 
     // Get user's roles
-    async getUserRoles(userId: string, organizationId?: string): Promise<{ role: Role; userRole: UserRole }[]> {
+    async getUserRoles(
+        userId: string,
+        organizationId?: string,
+    ): Promise<{ role: Role; userRole: UserRole }[]> {
         logger.debug('Fetching user roles', { userId, organizationId });
         return roleRepository.getUserRoles(userId, organizationId);
     }
@@ -378,7 +406,7 @@ export class RoleService {
     async assignPermissionToRole(assignData: AssignPermission): Promise<RolePermission> {
         logger.info('Assigning permission to role', {
             roleId: assignData.role_id,
-            permissionId: assignData.permission_id
+            permissionId: assignData.permission_id,
         });
 
         try {
@@ -387,7 +415,7 @@ export class RoleService {
             logger.error('Failed to assign permission to role', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 roleId: assignData.role_id,
-                permissionId: assignData.permission_id
+                permissionId: assignData.permission_id,
             });
             throw error;
         }
@@ -403,7 +431,7 @@ export class RoleService {
             logger.error('Failed to remove permission from role', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 roleId,
-                permissionId
+                permissionId,
             });
             throw error;
         }
@@ -420,7 +448,11 @@ export class RoleService {
      */
 
     // Check if user has permission
-    async checkUserPermission(userId: string, permissionName: string, organizationId?: string): Promise<boolean> {
+    async checkUserPermission(
+        userId: string,
+        permissionName: string,
+        organizationId?: string,
+    ): Promise<boolean> {
         logger.debug('Checking if user has permission', { userId, permissionName, organizationId });
 
         // First check for super_admin role (has all permissions)
@@ -436,4 +468,4 @@ export class RoleService {
         // Check specific permission
         return roleRepository.userHasPermission(userId, permissionName, organizationId);
     }
-} 
+}

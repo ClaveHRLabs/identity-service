@@ -14,7 +14,7 @@ import {
     UpdateOrganizationBrandingValidator,
     CompleteOrganizationSetupValidator,
 } from '../validators/organization.validator';
-import { logger } from '../../utils/logger';
+import { logger } from '@vspl/core';
 import { Permission } from '../../models/enums/roles.enum';
 
 /**

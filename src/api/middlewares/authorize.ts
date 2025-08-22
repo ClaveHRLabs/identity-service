@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { RoleService } from '../../services/role.service';
 import { HttpError, HttpStatusCode } from '@vspl/core';
-import logger from '../../utils/logger';
+import { logger } from '@vspl/core';
 
 // Initialize the role service
 const roleService = new RoleService();

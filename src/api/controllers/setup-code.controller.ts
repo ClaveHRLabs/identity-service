@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { SetupCodeService } from '../../services/setup-code.service';
-import { logger } from '../../utils/logger';
+import { logger, Measure } from '@vspl/core';
 
 export class SetupCodeController {
     private readonly setupCodeService: SetupCodeService;
@@ -13,6 +13,7 @@ export class SetupCodeController {
      * Create a new organization setup code
      * If organization_id is not provided, looks up or creates an organization by name
      */
+    @Measure()
     async createSetupCode(
         req: Request,
         res: Response,
@@ -60,6 +61,7 @@ export class SetupCodeController {
     /**
      * Get all setup codes for an organization
      */
+    @Measure()
     async getOrganizationSetupCodes(
         req: Request,
         res: Response,
@@ -90,6 +92,7 @@ export class SetupCodeController {
     /**
      * Validate and use a setup code
      */
+    @Measure()
     async validateSetupCode(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { code } = req.body;
@@ -119,6 +122,7 @@ export class SetupCodeController {
     /**
      * Delete a setup code
      */
+    @Measure()
     async deleteSetupCode(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;

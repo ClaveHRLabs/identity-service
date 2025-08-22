@@ -1,10 +1,9 @@
 import jwt from 'jsonwebtoken';
-import { Config } from '../config/config';
+import { IdentityConfig } from '../config/config';
 import { User } from '../models/schemas/user';
 import * as roleRepository from '../db/role';
 import * as userRepository from '../db/user';
-import { logger } from '../utils/logger';
-
+import { logger } from '@vspl/core';
 
 // Types
 export interface JwtPayload {
@@ -122,6 +121,7 @@ async function getUserRoleNames(userId: string): Promise<string[]> {
  */
 export async function generateAccessToken(
     user: User,
+    config: IdentityConfig,
     additionalData?: Record<string, any>,
 ): Promise<string> {
     // Get user's primary role and all roles
@@ -130,7 +130,6 @@ export async function generateAccessToken(
         getUserRoleNames(user.id),
         userRepository.getEmployeeByUserId(user.id, user.organization_id),
     ]);
-
 
     const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
         // Use sub as the user ID (JWT standard)
@@ -171,15 +170,15 @@ export async function generateAccessToken(
         payload.additionalData = additionalData;
     }
 
-    return jwt.sign(payload, Config.JWT_SECRET, {
-        expiresIn: Config.JWT_EXPIRATION as unknown as number,
+    return jwt.sign(payload, config.JWT_SECRET, {
+        expiresIn: config.JWT_EXPIRATION as unknown as number,
     });
 }
 
 /**
  * Generate a refresh token JWT (not to be confused with the refresh token in the database)
  */
-export async function generateRefreshToken(user: User): Promise<string> {
+export async function generateRefreshToken(user: User, config: IdentityConfig): Promise<string> {
     // Get user's primary role
     const [primaryRole, employee] = await Promise.all([
         getUserPrimaryRole(user.id),
@@ -204,17 +203,17 @@ export async function generateRefreshToken(user: User): Promise<string> {
         type: 'refresh',
     };
 
-    return jwt.sign(payload, Config.JWT_REFRESH_SECRET, {
-        expiresIn: Config.JWT_REFRESH_EXPIRATION as unknown as number,
+    return jwt.sign(payload, config.JWT_REFRESH_SECRET, {
+        expiresIn: config.JWT_REFRESH_EXPIRATION as unknown as number,
     });
 }
 
 /**
  * Verify an access token
  */
-export function verifyAccessToken(token: string): Promise<JwtPayload> {
+export function verifyAccessToken(token: string, config: IdentityConfig): Promise<JwtPayload> {
     return new Promise((resolve, reject) => {
-        jwt.verify(token, Config.JWT_SECRET, (err, decoded) => {
+        jwt.verify(token, config.JWT_SECRET, (err, decoded) => {
             if (err) {
                 return reject(err);
             }
@@ -232,9 +231,9 @@ export function verifyAccessToken(token: string): Promise<JwtPayload> {
 /**
  * Verify a refresh token
  */
-export function verifyRefreshToken(token: string): Promise<JwtPayload> {
+export function verifyRefreshToken(token: string, config: IdentityConfig): Promise<JwtPayload> {
     return new Promise((resolve, reject) => {
-        jwt.verify(token, Config.JWT_REFRESH_SECRET, (err, decoded) => {
+        jwt.verify(token, config.JWT_REFRESH_SECRET, (err, decoded) => {
             if (err) {
                 return reject(err);
             }

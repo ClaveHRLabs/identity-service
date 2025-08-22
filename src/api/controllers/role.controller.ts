@@ -13,8 +13,12 @@ export const roleController = {
     // Get all roles with pagination
     async getRoles(req: Request, res: Response, next: NextFunction) {
         try {
-            const limit = req.query.limit ? parseInt(req.query.limit as string) : PAGINATION.MAX_LIMIT;
-            const offset = req.query.offset ? parseInt(req.query.offset as string) : PAGINATION.DEFAULT_OFFSET;
+            const limit = req.query.limit
+                ? parseInt(req.query.limit as string)
+                : PAGINATION.MAX_LIMIT;
+            const offset = req.query.offset
+                ? parseInt(req.query.offset as string)
+                : PAGINATION.DEFAULT_OFFSET;
 
             const { roles, total } = await roleService.getRoles(limit, offset);
 
@@ -130,8 +134,12 @@ export const roleController = {
     // Get all permissions with pagination
     async getPermissions(req: Request, res: Response, next: NextFunction) {
         try {
-            const limit = req.query.limit ? parseInt(req.query.limit as string) : PAGINATION.MAX_LIMIT;
-            const offset = req.query.offset ? parseInt(req.query.offset as string) : PAGINATION.DEFAULT_OFFSET;
+            const limit = req.query.limit
+                ? parseInt(req.query.limit as string)
+                : PAGINATION.MAX_LIMIT;
+            const offset = req.query.offset
+                ? parseInt(req.query.offset as string)
+                : PAGINATION.DEFAULT_OFFSET;
 
             const { permissions, total } = await roleService.getPermissions(limit, offset);
 

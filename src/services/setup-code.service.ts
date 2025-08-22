@@ -1,4 +1,4 @@
-import logger from '../utils/logger';
+import { logger } from '@vspl/core';
 import * as setupCodeRepository from '../db/setup-code';
 import * as organizationRepository from '../db/organization';
 import { OrganizationService } from './organization.service';
@@ -8,7 +8,7 @@ import {
     OrganizationProfile,
     CreateOrganizationProfile,
 } from '../models/schemas/organization';
-import { HttpError, HttpStatusCode, CatchErrors, Measure } from '@vspl/core';
+import { HttpError, HttpStatusCode, Measure } from '@vspl/core';
 
 export class SetupCodeService {
     private organizationService: OrganizationService;
@@ -24,7 +24,6 @@ export class SetupCodeService {
     async createSetupCode(
         data: CreateSetupCode & { organization_name?: string },
     ): Promise<OrganizationSetupCode> {
-
         let organizationId = data.organization_id;
         const organizationName = data.organization_name;
 
@@ -58,8 +57,7 @@ export class SetupCodeService {
                     subscription_status: 'trial',
                 };
 
-                const newOrg =
-                    await organizationRepository.createOrganizationProfile(newOrgData);
+                const newOrg = await organizationRepository.createOrganizationProfile(newOrgData);
                 logger.info('Created new organization', {
                     organizationName: newOrg.name,
                     organizationId: newOrg.id,
@@ -72,15 +70,11 @@ export class SetupCodeService {
             data.organization_id = organizationId;
         } else if (!organizationId) {
             logger.error('Failed to create setup code - no organization ID or name provided');
-            throw new HttpError(
-                HttpStatusCode.BAD_REQUEST,
-                'Organization ID or name is required',
-            );
+            throw new HttpError(HttpStatusCode.BAD_REQUEST, 'Organization ID or name is required');
         }
 
         // Verify organization exists
-        const organization =
-            await this.organizationService.getOrganizationProfile(organizationId);
+        const organization = await this.organizationService.getOrganizationProfile(organizationId);
         if (!organization) {
             logger.error('Failed to create setup code - organization not found', {
                 organizationId,
@@ -102,7 +96,7 @@ export class SetupCodeService {
     /**
      * Get setup code by code string
      */
-    @CatchErrors()
+
     async getSetupCode(code: string): Promise<OrganizationSetupCode | null> {
         logger.debug('Fetching setup code', { code });
         return setupCodeRepository.getSetupCodeByCode(code);
@@ -115,12 +109,10 @@ export class SetupCodeService {
         organizationId: string,
         includeUsed = false,
     ): Promise<OrganizationSetupCode[]> {
-
         logger.debug('Fetching setup codes for organization', { organizationId, includeUsed });
 
         // Verify organization exists
-        const organization =
-            await this.organizationService.getOrganizationProfile(organizationId);
+        const organization = await this.organizationService.getOrganizationProfile(organizationId);
         if (!organization) {
             logger.error('Failed to fetch setup codes - organization not found', {
                 organizationId,
@@ -136,14 +128,13 @@ export class SetupCodeService {
      *
      * @returns The organization profile associated with the code
      */
-    @CatchErrors()
+
     @Measure()
     async validateAndUseSetupCode(code: string): Promise<{
         success: boolean;
         organization: OrganizationProfile | null;
         message?: string;
     }> {
-
         logger.info('Validating setup code', { code });
 
         const validationResult = await setupCodeRepository.validateSetupCode(code);
@@ -196,7 +187,7 @@ export class SetupCodeService {
     /**
      * Delete a setup code
      */
-    @CatchErrors()
+
     @Measure()
     async deleteSetupCode(id: string): Promise<boolean> {
         logger.info('Deleting setup code', { id });
@@ -206,7 +197,7 @@ export class SetupCodeService {
     /**
      * Clean up expired setup codes
      */
-    @CatchErrors()
+
     async cleanupExpiredCodes(): Promise<number> {
         logger.info('Cleaning up expired setup codes');
         const count = await setupCodeRepository.cleanupExpiredSetupCodes();

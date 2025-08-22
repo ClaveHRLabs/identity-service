@@ -1,17 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../../services/user.service';
-import { logger } from '../../utils/logger';
+import { logger, Measure } from '@vspl/core';
 
 export class UserController {
-    private readonly userService: UserService;
-
-    constructor(userService: UserService) {
-        this.userService = userService;
-    }
+    constructor(private readonly userService: UserService) {}
 
     /**
      * Create a new user
      */
+
+    @Measure()
     async createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const userData = req.body;
@@ -30,6 +28,7 @@ export class UserController {
     /**
      * Get user by ID
      */
+    @Measure()
     async getUser(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;
@@ -56,6 +55,7 @@ export class UserController {
     /**
      * Get current authenticated user
      */
+    @Measure()
     async getCurrentUser(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             // User is loaded by the loadUser middleware
@@ -80,6 +80,7 @@ export class UserController {
     /**
      * Update user
      */
+    @Measure()
     async updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;
@@ -108,6 +109,7 @@ export class UserController {
     /**
      * Delete user
      */
+    @Measure()
     async deleteUser(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { id } = req.params;
@@ -134,6 +136,7 @@ export class UserController {
     /**
      * List users with optional filtering
      */
+    @Measure()
     async listUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
         try {
             const { organization_id, status, email, limit = '100', offset = '0' } = req.query;
@@ -148,7 +151,11 @@ export class UserController {
             if (status) filters.status = status as string;
             if (email) filters.email = email as string;
 
-            const result = await this.userService.listUsers(Number(limit), Number(offset), filters.organization_id);
+            const result = await this.userService.listUsers(
+                Number(limit),
+                Number(offset),
+                filters.organization_id,
+            );
 
             res.status(200).json({
                 success: true,

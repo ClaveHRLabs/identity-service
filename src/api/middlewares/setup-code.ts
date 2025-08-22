@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { logger } from '../../utils/logger';
+import { logger } from '@vspl/core';
 
 /**
  * Middleware to add setup code to the response header

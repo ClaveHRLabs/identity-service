@@ -1,4 +1,4 @@
-import db from './db';
+import { query } from './index';
 import {
     OrganizationProfile,
     CreateOrganizationProfile,
@@ -9,7 +9,7 @@ import {
  * Get an organization profile by ID
  */
 export async function getOrganizationProfileById(id: string): Promise<OrganizationProfile | null> {
-    const result = await db.query('SELECT * FROM organization_profiles WHERE id = $1', [id]);
+    const result = await query('SELECT * FROM organization_profiles WHERE id = $1', [id]);
     return result.rows[0] || null;
 }
 
@@ -19,7 +19,7 @@ export async function getOrganizationProfileById(id: string): Promise<Organizati
 export async function findOrganizationProfileByName(
     name: string,
 ): Promise<OrganizationProfile | null> {
-    const result = await db.query(
+    const result = await query(
         'SELECT * FROM organization_profiles WHERE LOWER(name) = LOWER($1)',
         [name],
     );
@@ -39,7 +39,7 @@ export async function createOrganizationProfile(
 
     const values = Object.values(data);
 
-    const result = await db.query(
+    const result = await query(
         `INSERT INTO organization_profiles (${columns}) 
      VALUES (${placeholders}) 
      RETURNING *`,
@@ -67,7 +67,7 @@ export async function updateOrganizationProfile(
     // Create SET clause for each field to update
     const setClauses = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');
 
-    const result = await db.query(
+    const result = await query(
         `UPDATE organization_profiles 
      SET ${setClauses} 
      WHERE id = $${keys.length + 1} 
@@ -82,7 +82,7 @@ export async function updateOrganizationProfile(
  * Delete an organization profile
  */
 export async function deleteOrganizationProfile(id: string): Promise<boolean> {
-    const result = await db.query('DELETE FROM organization_profiles WHERE id = $1 RETURNING id', [
+    const result = await query('DELETE FROM organization_profiles WHERE id = $1 RETURNING id', [
         id,
     ]);
 
@@ -120,7 +120,7 @@ export async function getOrganizationProfiles(
     queryParams.push(limit);
     queryParams.push(offset);
 
-    const result = await db.query(
+    const result = await query(
         `SELECT * FROM organization_profiles 
      ${whereClause} 
      ORDER BY created_at DESC 
@@ -157,7 +157,7 @@ export async function countOrganizationProfiles(
         }
     }
 
-    const result = await db.query(
+    const result = await query(
         `SELECT COUNT(*) as count FROM organization_profiles ${whereClause}`,
         queryParams,
     );
@@ -172,7 +172,7 @@ export async function countOrganizationProfiles(
 export async function findOrganizationByEmailDomain(
     emailDomain: string,
 ): Promise<OrganizationProfile | null> {
-    const result = await db.query(
+    const result = await query(
         `SELECT * FROM organization_profiles
          WHERE status = 'active'
          AND website IS NOT NULL

@@ -39,7 +39,10 @@ const IdentityServiceConfigSchema = AppConfigSchema.extend({
 
     // Service-specific defaults for core fields
     SERVICE_NAME: z.string().default('identity-service'),
-    PORT: z.string().transform((val) => parseInt(val, 10)).default('5002'),
+    PORT: z
+        .string()
+        .transform((val) => parseInt(val, 10))
+        .default('5002'),
 });
 
 // Service-specific configuration type that extends the base config
@@ -97,7 +100,7 @@ async function createConfig(): Promise<IdentityConfig> {
 
         if (!result.success) {
             console.error('Invalid identity service configuration:', {
-                errors: result.error.format()
+                errors: result.error.format(),
             });
             throw new Error(`Invalid identity service configuration: ${result.error.message}`);
         }
@@ -112,76 +115,13 @@ async function createConfig(): Promise<IdentityConfig> {
 
         console.info('Identity service configuration loaded successfully');
         return finalConfig;
-
     } catch (error) {
         console.error('Failed to load identity service configuration:', error);
         throw error;
     }
 }
 
-// Export the config promise
-export const configPromise = createConfig();
-
-// For backward compatibility, export a function to get the config
+// Export async config loader function
 export async function getConfig(): Promise<IdentityConfig> {
-    return await configPromise;
+    return await createConfig();
 }
-
-// Legacy compatibility - synchronous Config object for backward compatibility
-// This will use a basic parse for immediate access, but async config is preferred
-let legacyConfig: IdentityConfig;
-try {
-    const tempResult = IdentityServiceConfigSchema.parse(process.env);
-    legacyConfig = {
-        ...tempResult,
-        IS_PRODUCTION: tempResult.NODE_ENV === 'production',
-        IS_DEVELOPMENT: tempResult.NODE_ENV === 'development',
-        IS_TEST: tempResult.NODE_ENV === 'test',
-    };
-} catch (error) {
-    console.error('Failed to create legacy config:', error);
-    throw error;
-}
-
-// Export Config for compatibility with existing imports
-export const Config = legacyConfig;
-
-// Legacy compatibility - export individual properties for backward compatibility
-export const {
-    // Core config
-    NODE_ENV,
-    PORT,
-    SERVICE_NAME,
-    DB_HOST,
-    DB_PORT,
-    DB_NAME,
-    DB_USER,
-    DB_PASS,
-    DB_MAX_POOL_SIZE,
-    LOG_LEVEL,
-    SERVICE_API_KEY,
-
-    // Identity-specific config
-    JWT_SECRET,
-    JWT_EXPIRATION,
-    JWT_REFRESH_SECRET,
-    JWT_REFRESH_EXPIRATION,
-    API_PREFIX,
-    FRONTEND_URL,
-    ADMIN_KEY,
-    GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET,
-    MICROSOFT_CLIENT_ID,
-    MICROSOFT_CLIENT_SECRET,
-    LINKEDIN_CLIENT_ID,
-    LINKEDIN_CLIENT_SECRET,
-    NOTIFICATION_SERVICE_URL,
-    SHOW_ERROR_STACK,
-    SHOW_ERROR_DETAILS,
-    IS_PRODUCTION,
-    IS_DEVELOPMENT,
-    IS_TEST,
-} = Config;
-
-// Legacy compatibility - keep the old Config class structure for backward compatibility
-export { getConfig as default };

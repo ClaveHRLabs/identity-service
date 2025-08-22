@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { RoleAssignmentService } from '../../services/role-assignment.service';
 import { RoleService } from '../../services/role.service';
 import { HttpError, HttpStatusCode } from '@vspl/core';
-import logger from '../../utils/logger';
+import { logger } from '@vspl/core';
 
 // Initialize services
 const roleAssignmentService = new RoleAssignmentService();

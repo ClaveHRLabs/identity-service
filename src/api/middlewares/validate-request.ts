@@ -31,11 +31,11 @@ export const validateRequestMiddleware = (schema: z.ZodSchema<any>) => {
 
                 next(
                     new HttpError(
-                        HttpStatusCode.BAD_REQUEST, 
-                        'Validation error', 
+                        HttpStatusCode.BAD_REQUEST,
+                        'Validation error',
                         'VALIDATION_ERROR',
-                        { errors: formattedErrors }
-                    )
+                        { errors: formattedErrors },
+                    ),
                 );
             } else {
                 next(error);

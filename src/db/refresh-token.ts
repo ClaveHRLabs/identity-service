@@ -1,6 +1,6 @@
-import db from './db';
+import { query } from './index';
 import { RefreshToken, CreateRefreshToken } from '../models/schemas/user';
-import { generateToken } from '../utils/token-generator';
+import { generateToken } from '@vspl/core';
 import crypto from 'crypto';
 
 /**
@@ -25,7 +25,7 @@ export async function createRefreshToken(data: CreateRefreshToken): Promise<Refr
     const expires_at = new Date();
     expires_at.setDate(expires_at.getDate() + expirationDays);
 
-    const result = await db.query(
+    const result = await query(
         `INSERT INTO refresh_tokens (
             user_id, token, expires_at, device_info
         ) VALUES ($1, $2, $3, $4)
@@ -54,7 +54,7 @@ export async function getRefreshTokenByToken(token: string): Promise<RefreshToke
     // Hash the token before querying
     const hashedToken = hashToken(token);
 
-    const result = await db.query('SELECT * FROM refresh_tokens WHERE token = $1', [hashedToken]);
+    const result = await query('SELECT * FROM refresh_tokens WHERE token = $1', [hashedToken]);
     return result.rows[0] || null;
 }
 
@@ -62,7 +62,7 @@ export async function getRefreshTokenByToken(token: string): Promise<RefreshToke
  * Get refresh tokens by user ID
  */
 export async function getRefreshTokensByUserId(userId: string): Promise<RefreshToken[]> {
-    const result = await db.query(
+    const result = await query(
         'SELECT * FROM refresh_tokens WHERE user_id = $1 AND revoked = false ORDER BY created_at DESC',
         [userId],
     );
@@ -73,7 +73,7 @@ export async function getRefreshTokensByUserId(userId: string): Promise<RefreshT
  * Revoke refresh token
  */
 export async function revokeRefreshToken(id: string): Promise<RefreshToken | null> {
-    const result = await db.query(
+    const result = await query(
         `UPDATE refresh_tokens
          SET revoked = true
          WHERE id = $1
@@ -87,7 +87,7 @@ export async function revokeRefreshToken(id: string): Promise<RefreshToken | nul
  * Revoke all refresh tokens for a user
  */
 export async function revokeAllUserRefreshTokens(userId: string): Promise<number> {
-    const result = await db.query(
+    const result = await query(
         `UPDATE refresh_tokens 
          SET revoked = true 
          WHERE user_id = $1 AND revoked = false 
@@ -130,7 +130,7 @@ export async function validateRefreshToken(token: string): Promise<{
 export async function cleanupRefreshTokens(): Promise<number> {
     const now = new Date();
 
-    const result = await db.query(
+    const result = await query(
         `DELETE FROM refresh_tokens 
          WHERE expires_at < $1 OR revoked = true 
          RETURNING id`,

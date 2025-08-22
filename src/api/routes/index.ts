@@ -1,5 +1,4 @@
 import { Express } from 'express';
-import { Config } from '../../config/config';
 import { OrganizationController } from '../controllers/organization.controller';
 import { SetupCodeController } from '../controllers/setup-code.controller';
 import { UserController } from '../controllers/user.controller';
@@ -18,6 +17,7 @@ export const registerRoutes = (
     setupCodeController: SetupCodeController,
     userController: UserController,
     authController: AuthController,
+    apiPrefix: string = '/api',
 ) => {
     // Create route handlers
     const organizationRouter = createOrganizationRoutes(organizationController);
@@ -26,7 +26,6 @@ export const registerRoutes = (
     const authRouter = createAuthRoutes(authController);
 
     // Mount all routes under the API prefix
-    const apiPrefix = Config.API_PREFIX || '/api';
     app.use(`${apiPrefix}/organizations`, organizationRouter);
     app.use(`${apiPrefix}/setup-codes`, setupCodeRouter);
     app.use(`${apiPrefix}/users`, userRouter);

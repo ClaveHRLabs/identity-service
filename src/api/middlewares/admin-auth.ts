@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import logger from '../../utils/logger';
+import { logger } from '@vspl/core';
 import { HttpError, HttpStatusCode } from '@vspl/core';
 import { RoleService } from '../../services/role.service';
 import { UserRole } from '../../models/enums/roles.enum';

@@ -7,7 +7,10 @@ import { CODE_GENERATION } from '../constants/app.constants';
  * @param includeSymbols Whether to include symbols in the code
  * @returns A random alphanumeric code
  */
-export function generateRandomCode(length: number = CODE_GENERATION.DEFAULT_CODE_LENGTH, includeSymbols = false): string {
+export function generateRandomCode(
+    length: number = CODE_GENERATION.DEFAULT_CODE_LENGTH,
+    includeSymbols = false,
+): string {
     // Define character sets
     const uppercaseChars = CODE_GENERATION.UPPERCASE_CHARS;
     const lowercaseChars = CODE_GENERATION.LOWERCASE_CHARS;
@@ -34,7 +37,9 @@ export function generateRandomCode(length: number = CODE_GENERATION.DEFAULT_CODE
  * @param byteLength The number of bytes (actual string length will be double)
  * @returns A random hex string
  */
-export function generateRandomHex(byteLength: number = CODE_GENERATION.DEFAULT_HEX_BYTE_LENGTH): string {
+export function generateRandomHex(
+    byteLength: number = CODE_GENERATION.DEFAULT_HEX_BYTE_LENGTH,
+): string {
     return crypto.randomBytes(byteLength).toString('hex');
 }
 

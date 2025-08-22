@@ -1,33 +1,32 @@
 /**
  * Application-wide constants for the Identity Service
- * 
+ *
  * This file contains all magic numbers, strings, and configuration values
  * used throughout the identity service to ensure consistency and maintainability.
  */
 
-/**
- * Authentication related custom headers
- */
-export enum AuthHeader {
-    USER_ID = 'x-user-id',
-    USER_EMAIL = 'x-user-email',
-    ORG_ID = 'x-organization-id',
-    EMPLOYEE_ID = 'x-employee-id',
-    USER_ROLES = 'x-user-roles',
-    USER_PERMISSIONS = 'x-user-permissions',
-    SERVICE_KEY = 'x-service-key',
-    SERVICE_NAME = 'x-service-name',
-    API_KEY = 'x-api-key',
-}
+import {
+    TOKEN_CONSTANTS,
+    CODE_GENERATION_CONSTANTS,
+    AuthHeader as CoreAuthHeader,
+    StandardHeader as CoreStandardHeader,
+} from '@vspl/core';
 
 /**
- * Standard HTTP header constants
+ * Authentication related custom headers - imported from @vspl/core
  */
-export enum StandardHeader {
-    CONTENT_TYPE = 'Content-Type',
-    ACCEPT = 'Accept',
-    REQUEST_ID = 'x-request-id',
-}
+export const AuthHeader = {
+    ...CoreAuthHeader,
+    // Add any identity-service specific headers here if needed
+} as const;
+
+/**
+ * Standard HTTP header constants - imported from @vspl/core
+ */
+export const StandardHeader = {
+    ...CoreStandardHeader,
+    // Add any identity-service specific headers here if needed
+} as const;
 
 /**
  * Rate Limiting Constants
@@ -55,16 +54,9 @@ export const PAGINATION = {
 } as const;
 
 /**
- * Token Constants
+ * Token Constants - imported from @vspl/core
  */
-export const TOKEN = {
-    MIN_LENGTH: 20,
-    DEFAULT_LENGTH: 32,
-    READABLE_TOKEN_LENGTH: 64,
-    MAGIC_LINK_EXPIRATION_MINUTES: 15,
-    DEFAULT_EXPIRATION_MINUTES: 30,
-    DEFAULT_EXPIRATION_HOURS: 24,
-} as const;
+export const TOKEN = TOKEN_CONSTANTS;
 
 /**
  * OAuth Provider URLs
@@ -106,17 +98,9 @@ export const AUTH = {
 } as const;
 
 /**
- * Code Generation Constants
+ * Code Generation Constants - imported from @vspl/core
  */
-export const CODE_GENERATION = {
-    UPPERCASE_CHARS: 'ABCDEFGHJKLMNPQRSTUVWXYZ', // Omit O and I for readability
-    LOWERCASE_CHARS: 'abcdefghijkmnpqrstuvwxyz', // Omit l and o for readability  
-    NUMBERS: '23456789', // Omit 0 and 1 for readability
-    SYMBOLS: '!@#$%^&*-_=+',
-    READABLE_CHARS: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
-    DEFAULT_CODE_LENGTH: 10,
-    DEFAULT_HEX_BYTE_LENGTH: 16,
-} as const;
+export const CODE_GENERATION = CODE_GENERATION_CONSTANTS;
 
 /**
  * Session Constants

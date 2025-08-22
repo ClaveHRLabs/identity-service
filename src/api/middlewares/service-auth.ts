@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import logger from '../../utils/logger';
-import { SERVICE_API_KEY } from '../../config/config';
+import { logger } from '@vspl/core';
+import { getDependency, SERVICE_NAMES } from '../../di';
+import { IdentityConfig } from '../../config/config';
 import { HttpError, HttpStatusCode } from '@vspl/core';
 import { AuthHeader } from '../../constants/app.constants';
 import * as userRepository from '../../db/user';
@@ -24,9 +25,12 @@ export const serviceAuthMiddleware = async (
             return next();
         }
 
+        // Get config from DI container
+        const config = getDependency<IdentityConfig>(SERVICE_NAMES.CONFIG);
+
         // If SERVICE_API_KEY is configured, validate it
         // If not configured, skip validation (useful for development)
-        if (SERVICE_API_KEY && SERVICE_API_KEY !== serviceKey) {
+        if (config.SERVICE_API_KEY && config.SERVICE_API_KEY !== serviceKey) {
             logger.warn('Invalid service API key', {
                 path: req.path,
                 method: req.method,
@@ -44,7 +48,7 @@ export const serviceAuthMiddleware = async (
         (req as any).isServiceRequest = true; // Mark as service request
 
         // Check if we have user context passed from another service
-                        const userId = req.headers[AuthHeader.USER_ID];
+        const userId = req.headers[AuthHeader.USER_ID];
         if (userId && typeof userId === 'string') {
             // Set the user ID on the request
             req.userId = userId;
@@ -106,7 +110,7 @@ export const serviceAuthMiddleware = async (
         }
 
         // Set organization context if provided
-                        const organizationId = req.headers[AuthHeader.ORG_ID];
+        const organizationId = req.headers[AuthHeader.ORG_ID];
         if (organizationId && typeof organizationId === 'string') {
             (req as any).organizationId = organizationId;
 
