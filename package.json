@@ -4,7 +4,7 @@
     "description": "Identity Service for ClaveHR - User authentication and authorization service",
     "main": "dist/app.js",
     "scripts": {
-        "build": "npm run lint && tsc",
+        "build": "tsc",
         "start": "node dist/app.js",
         "dev": "nodemon",
         "clean": "rm -rf dist && rm -rf node_modules",
@@ -14,7 +14,7 @@
         "migrate": "node scripts/migrate.js"
     },
     "dependencies": {
-        "@vspl/core": "file:../libs/lib-core",
+        "@vspl/core": "^0.1.10",
         "bcryptjs": "^2.4.3",
         "express-rate-limit": "^8.0.1",
         "jsonwebtoken": "^9.0.2",

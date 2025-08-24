@@ -87,6 +87,7 @@ const loadConfigOptions = {
     useAwsSecrets: false,
     useLocalEnvOverride: process.env.USE_LOCAL_ENV_OVERRIDE === 'true',
     loadDotenv: true,
+    dotenvPath: '../docker/.env',
 } as const;
 
 // Create async config loader function with safe parsing

@@ -1,4 +1,4 @@
-import { createApp, createDbPool, createHttpClient, logger } from '@vspl/core';
+import { createApp, createDbPool, createHttpClient, logger, HttpClient } from '@vspl/core';
 import { createContainer, registerService } from '@vspl/core';
 import { getConfig } from '../config/config';
 import { Pool } from 'pg';
@@ -68,57 +68,105 @@ export async function initializeContainer(): Promise<void> {
     ]);
 
     // 3. Core Services
-    registerService(appContainer, SERVICE_NAMES.USER_SERVICE, UserService, [
-        SERVICE_NAMES.DATABASE_SERVICE,
-    ]);
-    registerService(appContainer, SERVICE_NAMES.ROLE_SERVICE, RoleService, [
-        SERVICE_NAMES.DATABASE_SERVICE,
-    ]);
-    registerService(appContainer, SERVICE_NAMES.ORGANIZATION_SERVICE, OrganizationService, [
-        SERVICE_NAMES.DATABASE_SERVICE,
-    ]);
+    appContainer.register(
+        SERVICE_NAMES.USER_SERVICE,
+        () => {
+            const database = appContainer.get<DatabaseService>(SERVICE_NAMES.DATABASE_SERVICE);
+            return new UserService(database);
+        },
+        { dependencies: [SERVICE_NAMES.DATABASE_SERVICE] },
+    );
+    appContainer.register(
+        SERVICE_NAMES.ROLE_SERVICE,
+        () => {
+            return new RoleService();
+        },
+        { dependencies: [] },
+    );
+    appContainer.register(
+        SERVICE_NAMES.ORGANIZATION_SERVICE,
+        () => {
+            const database = appContainer.get<DatabaseService>(SERVICE_NAMES.DATABASE_SERVICE);
+            return new OrganizationService(database);
+        },
+        { dependencies: [SERVICE_NAMES.DATABASE_SERVICE] },
+    );
 
     // 4. Composite Services (depend on other services)
-    registerService(appContainer, SERVICE_NAMES.SETUP_CODE_SERVICE, SetupCodeService, [
-        SERVICE_NAMES.ORGANIZATION_SERVICE,
-        SERVICE_NAMES.DATABASE_SERVICE,
-    ]);
-    registerService(appContainer, SERVICE_NAMES.ROLE_ASSIGNMENT_SERVICE, RoleAssignmentService, [
-        SERVICE_NAMES.ROLE_SERVICE,
-    ]);
+    appContainer.register(
+        SERVICE_NAMES.SETUP_CODE_SERVICE,
+        () => {
+            const organizationService = appContainer.get<OrganizationService>(SERVICE_NAMES.ORGANIZATION_SERVICE);
+            return new SetupCodeService(organizationService);
+        },
+        { dependencies: [SERVICE_NAMES.ORGANIZATION_SERVICE] },
+    );
+    appContainer.register(
+        SERVICE_NAMES.ROLE_ASSIGNMENT_SERVICE,
+        () => {
+            return new RoleAssignmentService();
+        },
+        { dependencies: [] },
+    );
 
     // 5. Email Service (lazy - created on demand)
-    registerService(
-        appContainer,
+    appContainer.register(
         SERVICE_NAMES.EMAIL_SERVICE,
-        EmailService,
-        [SERVICE_NAMES.CONFIG],
-        { lazy: true },
+        () => {
+            const config = appContainer.get<IdentityConfig>(SERVICE_NAMES.CONFIG);
+            return new EmailService(config);
+        },
+        { dependencies: [SERVICE_NAMES.CONFIG], lazy: true },
     );
 
     // 6. Auth Service (depends on user and email services)
-    registerService(appContainer, SERVICE_NAMES.AUTH_SERVICE, AuthService, [
-        SERVICE_NAMES.USER_SERVICE,
-        SERVICE_NAMES.EMAIL_SERVICE,
-        SERVICE_NAMES.HTTP_CLIENT,
-        SERVICE_NAMES.CONFIG,
-    ]);
+    appContainer.register(
+        SERVICE_NAMES.AUTH_SERVICE,
+        () => {
+            const userService = appContainer.get<UserService>(SERVICE_NAMES.USER_SERVICE);
+            const emailService = appContainer.get<EmailService>(SERVICE_NAMES.EMAIL_SERVICE);
+            const httpClient = appContainer.get<HttpClient>(SERVICE_NAMES.HTTP_CLIENT);
+            const config = appContainer.get<IdentityConfig>(SERVICE_NAMES.CONFIG);
+            return new AuthService(userService, emailService, httpClient, config);
+        },
+        { dependencies: [SERVICE_NAMES.USER_SERVICE, SERVICE_NAMES.EMAIL_SERVICE, SERVICE_NAMES.HTTP_CLIENT, SERVICE_NAMES.CONFIG] },
+    );
 
     // 7. Controllers
-    registerService(appContainer, SERVICE_NAMES.USER_CONTROLLER, UserController, [
-        SERVICE_NAMES.USER_SERVICE,
-    ]);
-    registerService(appContainer, SERVICE_NAMES.AUTH_CONTROLLER, AuthController, [
-        SERVICE_NAMES.AUTH_SERVICE,
-        SERVICE_NAMES.CONFIG,
-    ]);
-    registerService(appContainer, SERVICE_NAMES.ORGANIZATION_CONTROLLER, OrganizationController, [
-        SERVICE_NAMES.ORGANIZATION_SERVICE,
-        SERVICE_NAMES.ROLE_SERVICE,
-    ]);
-    registerService(appContainer, SERVICE_NAMES.SETUP_CODE_CONTROLLER, SetupCodeController, [
-        SERVICE_NAMES.SETUP_CODE_SERVICE,
-    ]);
+    appContainer.register(
+        SERVICE_NAMES.USER_CONTROLLER,
+        () => {
+            const userService = appContainer.get<UserService>(SERVICE_NAMES.USER_SERVICE);
+            return new UserController(userService);
+        },
+        { dependencies: [SERVICE_NAMES.USER_SERVICE] },
+    );
+    appContainer.register(
+        SERVICE_NAMES.AUTH_CONTROLLER,
+        () => {
+            const authService = appContainer.get<AuthService>(SERVICE_NAMES.AUTH_SERVICE);
+            const config = appContainer.get<IdentityConfig>(SERVICE_NAMES.CONFIG);
+            return new AuthController(authService, config);
+        },
+        { dependencies: [SERVICE_NAMES.AUTH_SERVICE, SERVICE_NAMES.CONFIG] },
+    );
+    appContainer.register(
+        SERVICE_NAMES.ORGANIZATION_CONTROLLER,
+        () => {
+            const organizationService = appContainer.get<OrganizationService>(SERVICE_NAMES.ORGANIZATION_SERVICE);
+            const roleService = appContainer.get<RoleService>(SERVICE_NAMES.ROLE_SERVICE);
+            return new OrganizationController(organizationService, roleService);
+        },
+        { dependencies: [SERVICE_NAMES.ORGANIZATION_SERVICE, SERVICE_NAMES.ROLE_SERVICE] },
+    );
+    appContainer.register(
+        SERVICE_NAMES.SETUP_CODE_CONTROLLER,
+        () => {
+            const setupCodeService = appContainer.get<SetupCodeService>(SERVICE_NAMES.SETUP_CODE_SERVICE);
+            return new SetupCodeController(setupCodeService);
+        },
+        { dependencies: [SERVICE_NAMES.SETUP_CODE_SERVICE] },
+    );
 
     // 8. Express Application
     appContainer.register(SERVICE_NAMES.RATE_LIMITER, () => {
