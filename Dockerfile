@@ -28,8 +28,14 @@ RUN echo "registry=${NPM_DEFAULT_REGISTRY}" > ~/.npmrc && \
     echo "//$(echo ${VSPL_SCOPE_REGISTRY} | sed -e 's~^https://~~' -e 's~/$~~')/:_authToken=${CODEARTIFACT_TOKEN}" >> ~/.npmrc; \
     fi
 
-# Copy application code
+# Copy application code (excluding node_modules via .dockerignore)
 COPY . .
+
+# Remove entire node_modules and package-lock.json to ensure clean slate
+RUN rm -rf node_modules package-lock.json
+
+# Install dependencies from scratch (fresh resolution from package.json only)
+RUN npm install
 
 # Build the application
 RUN npm run build
