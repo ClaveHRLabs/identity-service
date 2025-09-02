@@ -15,6 +15,7 @@ import { OrganizationService } from '../services/organization.service';
 import { SetupCodeService } from '../services/setup-code.service';
 import { RoleService } from '../services/role.service';
 import { RoleAssignmentService } from '../services/role-assignment.service';
+import { ApiKeyService } from '../services/api-key.service';
 
 // Controllers
 import { UserController } from '../api/controllers/user.controller';
@@ -22,6 +23,7 @@ import { AuthController } from '../api/controllers/auth.controller';
 import { OrganizationController } from '../api/controllers/organization.controller';
 import { SetupCodeController } from '../api/controllers/setup-code.controller';
 import { RoleController } from '../api/controllers/role.controller';
+import { ApiKeyController } from '../api/controllers/api-key.controller';
 
 // Middleware and routes
 import { registerRoutes } from '../api/routes';
@@ -107,9 +109,10 @@ export async function initializeContainer(): Promise<void> {
     appContainer.register(
         SERVICE_NAMES.ROLE_ASSIGNMENT_SERVICE,
         () => {
-            return new RoleAssignmentService();
+            const roleService = appContainer.get<RoleService>(SERVICE_NAMES.ROLE_SERVICE);
+            return new RoleAssignmentService(roleService);
         },
-        { dependencies: [] },
+        { dependencies: [SERVICE_NAMES.ROLE_SERVICE] },
     );
 
     // 5. Email Service (lazy - created on demand)
@@ -120,6 +123,16 @@ export async function initializeContainer(): Promise<void> {
             return new EmailService(config);
         },
         { dependencies: [SERVICE_NAMES.CONFIG], lazy: true },
+    );
+
+    // 5.5. API Key Service
+    appContainer.register(
+        SERVICE_NAMES.API_KEY_SERVICE,
+        () => {
+            const config = appContainer.get<IdentityConfig>(SERVICE_NAMES.CONFIG);
+            return new ApiKeyService(config);
+        },
+        { dependencies: [SERVICE_NAMES.CONFIG] },
     );
 
     // 6. Auth Service (depends on user and email services)
@@ -189,6 +202,14 @@ export async function initializeContainer(): Promise<void> {
         },
         { dependencies: [SERVICE_NAMES.ROLE_SERVICE] },
     );
+    appContainer.register(
+        SERVICE_NAMES.API_KEY_CONTROLLER,
+        () => {
+            const apiKeyService = appContainer.get<ApiKeyService>(SERVICE_NAMES.API_KEY_SERVICE);
+            return new ApiKeyController(apiKeyService);
+        },
+        { dependencies: [SERVICE_NAMES.API_KEY_SERVICE] },
+    );
 
     // 8. Express Application
     appContainer.register(SERVICE_NAMES.RATE_LIMITER, () => {
@@ -247,6 +268,7 @@ export async function initializeContainer(): Promise<void> {
                 appContainer.get(SERVICE_NAMES.USER_CONTROLLER),
                 appContainer.get(SERVICE_NAMES.AUTH_CONTROLLER),
                 appContainer.get(SERVICE_NAMES.ROLE_CONTROLLER),
+                appContainer.get(SERVICE_NAMES.API_KEY_CONTROLLER),
                 config.API_PREFIX,
             );
 
@@ -262,6 +284,7 @@ export async function initializeContainer(): Promise<void> {
                 SERVICE_NAMES.USER_CONTROLLER,
                 SERVICE_NAMES.AUTH_CONTROLLER,
                 SERVICE_NAMES.ROLE_CONTROLLER,
+                SERVICE_NAMES.API_KEY_CONTROLLER,
             ],
         },
     );

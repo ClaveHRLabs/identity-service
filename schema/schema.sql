@@ -23,6 +23,55 @@ $$ LANGUAGE plpgsql;
 
 -- END identity-service/schema/migrations/001_initial_schema.sql
 
+-- BEGIN identity-service/schema/migrations/004_api_keys.sql
+-- Migration for API key management
+
+-- Create api_keys table
+CREATE TABLE IF NOT EXISTS api_keys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    key VARCHAR(37) NOT NULL UNIQUE, -- Format: xapi-{32 character random string}
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    expires_at TIMESTAMP WITH TIME ZONE, -- NULL means never expires
+    last_used_at TIMESTAMP WITH TIME ZONE,
+    last_used_ip INET,
+    usage_count INTEGER NOT NULL DEFAULT 0,
+    rate_limit_per_minute INTEGER, -- Optional rate limiting
+    allowed_ips INET[], -- IP whitelist
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+);
+
+-- Create indexes for api_keys table
+CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
+CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys(key);
+CREATE INDEX IF NOT EXISTS idx_api_keys_is_active ON api_keys(is_active);
+CREATE INDEX IF NOT EXISTS idx_api_keys_expires_at ON api_keys(expires_at);
+CREATE INDEX IF NOT EXISTS idx_api_keys_last_used_at ON api_keys(last_used_at);
+
+-- Create trigger for updating updated_at
+CREATE TRIGGER update_api_keys_updated_at
+    BEFORE UPDATE ON api_keys
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at();
+
+-- Add constraint to ensure active API keys have valid expiration
+ALTER TABLE api_keys ADD CONSTRAINT check_active_expiration 
+    CHECK (is_active = false OR expires_at IS NULL OR expires_at > NOW());
+
+-- Add constraint to ensure usage_count is non-negative
+ALTER TABLE api_keys ADD CONSTRAINT check_usage_count_positive 
+    CHECK (usage_count >= 0);
+
+-- Add constraint to ensure rate_limit_per_minute is reasonable
+ALTER TABLE api_keys ADD CONSTRAINT check_rate_limit_reasonable 
+    CHECK (rate_limit_per_minute IS NULL OR (rate_limit_per_minute >= 1 AND rate_limit_per_minute <= 10000));
+
+-- END identity-service/schema/migrations/004_api_keys.sql
+
 -- BEGIN identity-service/schema/migrations/002_organization_profiles.sql
 -- Migration for organization profiles and setup codes
 

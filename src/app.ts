@@ -17,9 +17,11 @@ async function startServer() {
         const dbPool = getDependency<Pool>(SERVICE_NAMES.DB_POOL);
 
         // setup the error controller
-        app.use(createErrorHandler({
-            includeStackTrace: config.SHOW_ERROR_STACK,
-        }));
+        app.use(
+            createErrorHandler({
+                includeStackTrace: config.SHOW_ERROR_STACK,
+            }),
+        );
 
         // Start server
         const server = app.listen(config.PORT, () => {

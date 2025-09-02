@@ -6,11 +6,7 @@ import { UserRole } from '@vspl/core';
  * Service to handle role assignment validation and business rules
  */
 export class RoleAssignmentService {
-    private roleService: RoleService;
-
-    constructor() {
-        this.roleService = new RoleService();
-    }
+    constructor(private readonly roleService: RoleService) {}
 
     /**
      * Validate if a user can assign a specific role to another user

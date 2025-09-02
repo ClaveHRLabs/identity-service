@@ -22,6 +22,7 @@ export const SERVICE_NAMES = {
     SETUP_CODE_SERVICE: 'setupCodeService',
     ROLE_SERVICE: 'roleService',
     ROLE_ASSIGNMENT_SERVICE: 'roleAssignmentService',
+    API_KEY_SERVICE: 'apiKeyService',
 
     // Controllers
     USER_CONTROLLER: 'userController',
@@ -29,6 +30,7 @@ export const SERVICE_NAMES = {
     ORGANIZATION_CONTROLLER: 'organizationController',
     SETUP_CODE_CONTROLLER: 'setupCodeController',
     ROLE_CONTROLLER: 'roleController',
+    API_KEY_CONTROLLER: 'apiKeyController',
 
     // Application
     EXPRESS_APP: 'app',

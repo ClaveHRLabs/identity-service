@@ -14,20 +14,11 @@ import {
     GetRoleValidator,
     DeleteRoleValidator,
     ListRolesValidator,
-    CreatePermissionValidator,
-    UpdatePermissionValidator,
-    GetPermissionValidator,
-    DeletePermissionValidator,
-    ListPermissionsValidator,
     AssignRoleToUserValidator,
     AssignRoleToUserByNameValidator,
     RemoveRoleFromUserValidator,
     RemoveRoleFromUserByNameValidator,
     GetUserRolesValidator,
-    AssignPermissionToRoleValidator,
-    RemovePermissionFromRoleValidator,
-    GetRolePermissionsValidator,
-    CheckUserPermissionValidator,
 } from '../validators/role.validator';
 import { Permission } from '../../models/enums/roles.enum';
 import { RoleController } from '../controllers/role.controller';
@@ -92,54 +83,6 @@ export const createRoleRoutes = (roleController: RoleController) => {
     );
 
     /**
-     * Permission Management Routes
-     */
-    router.get(
-        '/permissions',
-        serviceAuth, // Add service auth
-        authenticate,
-        authorize(Permission.MANAGE_ROLES),
-        validateRequest(ListPermissionsValidator),
-        roleController.getPermissions.bind(roleController),
-    );
-
-    router.get(
-        '/permissions/:id',
-        serviceAuth, // Add service auth
-        authenticate,
-        authorize(Permission.MANAGE_ROLES),
-        validateRequest(GetPermissionValidator),
-        roleController.getPermissionById.bind(roleController),
-    );
-
-    router.post(
-        '/permissions',
-        serviceAuth, // Add service auth
-        authenticate,
-        authorize(Permission.MANAGE_SYSTEM),
-        validateRequest(CreatePermissionValidator),
-        roleController.createPermission.bind(roleController),
-    );
-
-    router.put(
-        '/permissions/:id',
-        serviceAuth, // Add service auth
-        authenticate,
-        authorize(Permission.MANAGE_SYSTEM),
-        validateRequest(UpdatePermissionValidator),
-        roleController.updatePermission.bind(roleController),
-    );
-
-    router.delete(
-        '/permissions/:id',
-        serviceAuth, // Add service auth
-        authenticate,
-        authorize(Permission.MANAGE_SYSTEM),
-        validateRequest(DeletePermissionValidator),
-        roleController.deletePermission.bind(roleController),
-    );
-
-    /**
      * User Role Assignment Routes
      */
     router.get(
@@ -187,48 +130,6 @@ export const createRoleRoutes = (roleController: RoleController) => {
         validateRequest(RemoveRoleFromUserValidator),
         validateRoleAssignment,
         roleController.deleteRole.bind(roleController), // TODO: implement removeRoleFromUser
-    );
-
-    /**
-     * Role Permission Routes
-     */
-    router.get(
-        '/:roleId/permissions',
-        serviceAuth, // Add service auth
-        authenticate,
-        authorize(Permission.VIEW_ALL_USERS),
-        validateRequest(GetRolePermissionsValidator),
-        roleController.getRolePermissions.bind(roleController),
-    );
-
-    router.post(
-        '/permissions/assign',
-        serviceAuth, // Add service auth
-        authenticate,
-        authorize(Permission.MANAGE_SYSTEM),
-        validateRequest(AssignPermissionToRoleValidator),
-        roleController.assignPermissionToRole.bind(roleController),
-    );
-
-    router.delete(
-        '/:roleId/permissions/:permissionId',
-        serviceAuth, // Add service auth
-        authenticate,
-        authorize(Permission.MANAGE_SYSTEM),
-        validateRequest(RemovePermissionFromRoleValidator),
-        roleController.removePermissionFromRole.bind(roleController),
-    );
-
-    /**
-     * Permission Check Route
-     */
-    router.get(
-        '/check-permission/:userId/:permissionName',
-        serviceAuth, // Add service auth
-        authenticate,
-        authorize(Permission.VIEW_ALL_USERS),
-        validateRequest(CheckUserPermissionValidator),
-        roleController.getRoles.bind(roleController), // TODO: implement checkUserPermission
     );
 
     return router;

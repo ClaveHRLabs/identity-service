@@ -92,34 +92,30 @@ const loadConfigOptions = {
 
 // Create async config loader function with safe parsing
 async function createConfig(): Promise<IdentityConfig> {
-    try {
-        // Load environment variables without schema validation
-        const env = await loadConfig(loadConfigOptions);
+    // Load environment variables without schema validation
+    const env = await loadConfig(loadConfigOptions);
 
-        // Apply IdentityConfig schema validation with safe parsing
-        const result = IdentityServiceConfigSchema.safeParse(env);
+    // Apply IdentityConfig schema validation with safe parsing
+    const result = IdentityServiceConfigSchema.safeParse(env);
 
-        if (!result.success) {
-            console.error('Invalid identity service configuration:', {
-                errors: result.error.format(),
-            });
-            throw new Error(`Invalid identity service configuration: ${result.error.message}`);
-        }
-
-        // Add computed properties
-        const finalConfig: IdentityConfig = {
-            ...result.data,
-            IS_PRODUCTION: result.data.NODE_ENV === 'production',
-            IS_DEVELOPMENT: result.data.NODE_ENV === 'development',
-            IS_TEST: result.data.NODE_ENV === 'test',
-        };
-
-        console.info('Identity service configuration loaded successfully');
-        return finalConfig;
-    } catch (error) {
-        console.error('Failed to load identity service configuration:', error);
-        throw error;
+    if (!result.success) {
+        console.error('Invalid identity service configuration:', {
+            errors: result.error.format(),
+        });
+        // should not start the server if the configuration is invalid
+        throw new Error(`Invalid identity service configuration: ${result.error.message}`);
     }
+
+    // Add computed properties
+    const finalConfig: IdentityConfig = {
+        ...result.data,
+        IS_PRODUCTION: result.data.NODE_ENV === 'production',
+        IS_DEVELOPMENT: result.data.NODE_ENV === 'development',
+        IS_TEST: result.data.NODE_ENV === 'test',
+    };
+
+    console.info('Identity service configuration loaded successfully');
+    return finalConfig;
 }
 
 // Export async config loader function

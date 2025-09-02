@@ -1,4 +1,4 @@
-import { logger, HttpError, HttpStatusCode, Measure } from '@vspl/core';
+import { logger, HttpError, HttpStatusCode } from '@vspl/core';
 import * as organizationRepository from '../db/organization';
 import * as setupCodeRepository from '../db/setup-code';
 import {
@@ -20,30 +20,19 @@ export class OrganizationService {
     ): Promise<boolean> {
         if (!setupCode) return false;
 
-        try {
-            const validationResult = await setupCodeRepository.validateSetupCode(setupCode);
+        const validationResult = await setupCodeRepository.validateSetupCode(setupCode);
 
-            if (!validationResult.valid || !validationResult.setupCode) {
-                return false;
-            }
-
-            // Check if the setup code is for this organization
-            return validationResult.setupCode.organization_id === organizationId;
-        } catch (error) {
-            logger.error('Error validating setup code for organization', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                setupCode,
-                organizationId,
-            });
+        if (!validationResult.valid || !validationResult.setupCode) {
             return false;
         }
+
+        // Check if the setup code is for this organization
+        return validationResult.setupCode.organization_id === organizationId;
     }
 
     /**
      * Create a new organization profile
      */
-
-    @Measure()
     async createOrganizationProfile(
         profileData: CreateOrganizationProfile,
         setupCode?: string,
@@ -53,22 +42,13 @@ export class OrganizationService {
             hasSetupCode: !!setupCode,
         });
 
-        try {
-            const newProfile = await organizationRepository.createOrganizationProfile(profileData);
-            logger.info('Organization profile created successfully', {
-                id: newProfile.id,
-                name: newProfile.name,
-                hasSetupCode: !!setupCode,
-            });
-            return newProfile;
-        } catch (error) {
-            logger.error('Failed to create organization profile', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                name: profileData.name,
-                hasSetupCode: !!setupCode,
-            });
-            throw error;
-        }
+        const newProfile = await organizationRepository.createOrganizationProfile(profileData);
+        logger.info('Organization profile created successfully', {
+            id: newProfile.id,
+            name: newProfile.name,
+            hasSetupCode: !!setupCode,
+        });
+        return newProfile;
     }
 
     /**
@@ -98,45 +78,36 @@ export class OrganizationService {
             hasSetupCode: !!setupCode,
         });
 
-        try {
-            // If setup code is provided, validate it for this organization
-            if (setupCode) {
-                const isValid = await this.validateSetupCodeForOrganization(setupCode, id);
-                if (!isValid) {
-                    logger.warn('Invalid setup code for organization update', { id, setupCode });
-                    throw new HttpError(
-                        HttpStatusCode.FORBIDDEN,
-                        'Invalid setup code for this organization',
-                    );
-                }
+        // If setup code is provided, validate it for this organization
+        if (setupCode) {
+            const isValid = await this.validateSetupCodeForOrganization(setupCode, id);
+            if (!isValid) {
+                logger.warn('Invalid setup code for organization update', { id, setupCode });
+                throw new HttpError(
+                    HttpStatusCode.FORBIDDEN,
+                    'Invalid setup code for this organization',
+                );
             }
+        }
 
-            const updatedProfile = await organizationRepository.updateOrganizationProfile(
+        const updatedProfile = await organizationRepository.updateOrganizationProfile(
+            id,
+            updateData,
+        );
+
+        if (updatedProfile) {
+            logger.info('Organization profile updated successfully', {
                 id,
-                updateData,
-            );
-
-            if (updatedProfile) {
-                logger.info('Organization profile updated successfully', {
-                    id,
-                    hasSetupCode: !!setupCode,
-                });
-            } else {
-                logger.warn('Organization profile not found for update', {
-                    id,
-                    hasSetupCode: !!setupCode,
-                });
-            }
-
-            return updatedProfile;
-        } catch (error) {
-            logger.error('Failed to update organization profile', {
-                id,
-                error: error instanceof Error ? error.message : 'Unknown error',
                 hasSetupCode: !!setupCode,
             });
-            throw error;
+        } else {
+            logger.warn('Organization profile not found for update', {
+                id,
+                hasSetupCode: !!setupCode,
+            });
         }
+
+        return updatedProfile;
     }
 
     /**
@@ -148,42 +119,33 @@ export class OrganizationService {
             hasSetupCode: !!setupCode,
         });
 
-        try {
-            // If setup code is provided, validate it for this organization
-            if (setupCode) {
-                const isValid = await this.validateSetupCodeForOrganization(setupCode, id);
-                if (!isValid) {
-                    logger.warn('Invalid setup code for organization deletion', { id, setupCode });
-                    throw new HttpError(
-                        HttpStatusCode.FORBIDDEN,
-                        'Invalid setup code for this organization',
-                    );
-                }
+        // If setup code is provided, validate it for this organization
+        if (setupCode) {
+            const isValid = await this.validateSetupCodeForOrganization(setupCode, id);
+            if (!isValid) {
+                logger.warn('Invalid setup code for organization deletion', { id, setupCode });
+                throw new HttpError(
+                    HttpStatusCode.FORBIDDEN,
+                    'Invalid setup code for this organization',
+                );
             }
+        }
 
-            const deleted = await organizationRepository.deleteOrganizationProfile(id);
+        const deleted = await organizationRepository.deleteOrganizationProfile(id);
 
-            if (deleted) {
-                logger.info('Organization profile deleted successfully', {
-                    id,
-                    hasSetupCode: !!setupCode,
-                });
-            } else {
-                logger.warn('Organization profile not found for deletion', {
-                    id,
-                    hasSetupCode: !!setupCode,
-                });
-            }
-
-            return deleted;
-        } catch (error) {
-            logger.error('Failed to delete organization profile', {
+        if (deleted) {
+            logger.info('Organization profile deleted successfully', {
                 id,
-                error: error instanceof Error ? error.message : 'Unknown error',
                 hasSetupCode: !!setupCode,
             });
-            throw error;
+        } else {
+            logger.warn('Organization profile not found for deletion', {
+                id,
+                hasSetupCode: !!setupCode,
+            });
         }
+
+        return deleted;
     }
 
     /**
@@ -202,19 +164,11 @@ export class OrganizationService {
             hasSetupCode: !!setupCode,
         });
 
-        try {
-            const [profiles, total] = await Promise.all([
-                organizationRepository.getOrganizationProfiles(filters, limit, offset),
-                organizationRepository.countOrganizationProfiles(filters),
-            ]);
+        const [profiles, total] = await Promise.all([
+            organizationRepository.getOrganizationProfiles(filters, limit, offset),
+            organizationRepository.countOrganizationProfiles(filters),
+        ]);
 
-            return { profiles, total };
-        } catch (error) {
-            logger.error('Failed to fetch organization profiles', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                hasSetupCode: !!setupCode,
-            });
-            throw error;
-        }
+        return { profiles, total };
     }
 }

@@ -8,9 +8,11 @@ import { createSetupCodeRoutes } from './setup-code.routes';
 import { createUserRoutes } from './user.routes';
 import { createAuthRoutes } from './auth.routes';
 import { createRoleRoutes } from './role.routes';
+import { createApiKeyRoutes } from './api-key.routes';
 import { validateRequest } from '../middlewares/validate-request';
 import { ListSetupCodesValidator } from '../validators/organization.validator';
 import { RoleController } from '../controllers/role.controller';
+import { ApiKeyController } from '../controllers/api-key.controller';
 
 export const registerRoutes = (
     app: Express,
@@ -19,6 +21,7 @@ export const registerRoutes = (
     userController: UserController,
     authController: AuthController,
     roleController: RoleController,
+    apiKeyController: ApiKeyController,
     apiPrefix: string = '/api',
 ) => {
     // Create route handlers
@@ -27,6 +30,7 @@ export const registerRoutes = (
     const userRouter = createUserRoutes(userController);
     const authRouter = createAuthRoutes(authController);
     const roleRouter = createRoleRoutes(roleController);
+    const apiKeyRouter = createApiKeyRoutes(apiKeyController);
 
     // Mount all routes under the API prefix
     app.use(`${apiPrefix}/organizations`, organizationRouter);
@@ -34,6 +38,7 @@ export const registerRoutes = (
     app.use(`${apiPrefix}/users`, userRouter);
     app.use(`${apiPrefix}/auth`, authRouter);
     app.use(`${apiPrefix}/roles`, roleRouter);
+    app.use(`${apiPrefix}/api-keys`, apiKeyRouter);
 
     // Register the route for getting all setup codes for an organization
     // This is defined here because it uses both organization and setup code routes

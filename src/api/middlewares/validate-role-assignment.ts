@@ -3,10 +3,13 @@ import { RoleAssignmentService } from '../../services/role-assignment.service';
 import { RoleService } from '../../services/role.service';
 import { HttpError, HttpStatusCode } from '@vspl/core';
 import { logger } from '@vspl/core';
+import { appContainer, SERVICE_NAMES } from '../../di';
 
 // Initialize services
-const roleAssignmentService = new RoleAssignmentService();
-const roleService = new RoleService();
+const roleAssignmentService = appContainer?.get<RoleAssignmentService>(
+    SERVICE_NAMES.ROLE_ASSIGNMENT_SERVICE,
+);
+const roleService = appContainer?.get<RoleService>(SERVICE_NAMES.ROLE_SERVICE);
 
 // Add property to Express Request
 declare global {

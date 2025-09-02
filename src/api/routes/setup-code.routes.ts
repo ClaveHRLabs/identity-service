@@ -1,6 +1,5 @@
 import { SetupCodeController } from '../controllers/setup-code.controller';
 import { validateRequest } from '../middlewares/validate-request';
-import { verifyAdminOrOperator } from '../middlewares/admin-auth';
 import { authenticate } from '../middlewares/authenticate';
 import { addSetupCodeHeader } from '../middlewares/setup-code';
 import {
@@ -17,7 +16,6 @@ export const createSetupCodeRoutes = (setupCodeController: SetupCodeController) 
     router.post(
         '/',
         authenticate,
-        verifyAdminOrOperator,
         validateRequest(CreateSetupCodeValidator),
         setupCodeController.createSetupCode.bind(setupCodeController),
     );
@@ -34,7 +32,6 @@ export const createSetupCodeRoutes = (setupCodeController: SetupCodeController) 
     router.delete(
         '/:id',
         authenticate,
-        verifyAdminOrOperator,
         validateRequest(DeleteSetupCodeValidator),
         setupCodeController.deleteSetupCode.bind(setupCodeController),
     );
