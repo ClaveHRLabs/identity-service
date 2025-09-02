@@ -8,7 +8,6 @@ export class UserController {
     /**
      * Create a new user
      */
-
     @CatchErrors({ rethrow: false })
     @Measure({ metricName: 'createUser', logLevel: 'info' })
     async createUser(req: Request, res: Response): Promise<void> {

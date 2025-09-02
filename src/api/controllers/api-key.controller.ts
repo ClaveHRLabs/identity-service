@@ -2,6 +2,7 @@ import { CatchErrors, createLogger, HttpStatusCode, Measure, Request, Response }
 
 import { ApiKeyService } from '../../services/api-key.service';
 import { CreateApiKey, UpdateApiKey } from '../../models/schemas/api-key';
+import { getClientIp } from '../../utils/ip';
 
 const logger = createLogger();
 
@@ -65,7 +66,7 @@ export class ApiKeyController {
     @Measure({ metricName: 'getApiKey', logLevel: 'info' })
     async getApiKey(req: Request, res: Response): Promise<void> {
         const userId = (req as any).user?.id;
-        const { apiKeyId } = req.params;
+        const { id } = req.params;
 
         if (!userId) {
             res.status(HttpStatusCode.UNAUTHORIZED).json({
@@ -75,7 +76,7 @@ export class ApiKeyController {
             return;
         }
 
-        const apiKey = await this.apiKeyService.getApiKeyDetails(userId, apiKeyId);
+        const apiKey = await this.apiKeyService.getApiKeyDetails(userId, id);
 
         res.status(HttpStatusCode.OK).json({
             success: true,
@@ -90,7 +91,7 @@ export class ApiKeyController {
     @Measure({ metricName: 'updateApiKey', logLevel: 'info' })
     async updateApiKey(req: Request, res: Response): Promise<void> {
         const userId = (req as any).user?.id;
-        const { apiKeyId } = req.params;
+        const { id } = req.params;
         const updateData: UpdateApiKey = req.body;
 
         if (!userId) {
@@ -101,9 +102,9 @@ export class ApiKeyController {
             return;
         }
 
-        const updatedApiKey = await this.apiKeyService.updateApiKey(userId, apiKeyId, updateData);
+        const updatedApiKey = await this.apiKeyService.updateApiKey(userId, id, updateData);
 
-        logger.info('API key updated successfully', { userId, apiKeyId });
+        logger.info('API key updated successfully', { userId, id });
 
         res.status(HttpStatusCode.OK).json({
             success: true,
@@ -119,7 +120,7 @@ export class ApiKeyController {
     @Measure({ metricName: 'deleteApiKey', logLevel: 'info' })
     async deleteApiKey(req: Request, res: Response): Promise<void> {
         const userId = (req as any).user?.id;
-        const { apiKeyId } = req.params;
+        const { id } = req.params;
 
         if (!userId) {
             res.status(HttpStatusCode.UNAUTHORIZED).json({
@@ -129,9 +130,8 @@ export class ApiKeyController {
             return;
         }
 
-        await this.apiKeyService.deleteApiKey(userId, apiKeyId);
-
-        logger.info('API key deleted successfully', { userId, apiKeyId });
+        await this.apiKeyService.deleteApiKey(userId, id);
+        logger.info('API key deleted successfully', { userId, id });
 
         res.status(HttpStatusCode.OK).json({
             success: true,
@@ -146,7 +146,10 @@ export class ApiKeyController {
     @Measure({ metricName: 'authenticateWithApiKey', logLevel: 'info' })
     async authenticateWithApiKey(req: Request, res: Response): Promise<void> {
         const { api_key } = req.body;
-        const clientIp = req.ip || req.connection.remoteAddress;
+        // Extract clean client IP address
+        const clientIp = getClientIp(req);
+
+        logger.info('Authenticating with API key', { api_key, clientIp });
 
         if (!api_key) {
             res.status(HttpStatusCode.BAD_REQUEST).json({

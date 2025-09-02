@@ -51,7 +51,7 @@ export async function createApiKey(
  */
 export async function getApiKeyByKey(key: string): Promise<ApiKey | null> {
     const query = `
-        SELECT ak.*, u.email as user_email, u.organization_id, u.roles
+        SELECT ak.*, u.email as user_email, u.organization_id, 'test' roles
         FROM api_keys ak
         JOIN users u ON ak.user_id = u.id
         WHERE ak.key = $1 AND ak.is_active = true
@@ -70,14 +70,15 @@ export async function getApiKeyByKey(key: string): Promise<ApiKey | null> {
 /**
  * Get API key by ID
  */
-export async function getApiKeyById(id: string): Promise<ApiKey | null> {
+export async function getApiKeyById(id: string, userId?: string): Promise<ApiKey | null> {
+    logger.info('Getting API key by id', { id, userId });
     const query = `
-        SELECT * FROM api_keys 
-        WHERE id = $1
+        SELECT * FROM api_keys
+        WHERE id = $1 ${userId ? `AND user_id = $2` : ''}
     `;
 
     try {
-        const queryResult = await executeQuery(query, [id]);
+        const queryResult = await executeQuery(query, userId ? [id, userId] : [id]);
         return queryResult.rows.length > 0 ? queryResult.rows[0] : null;
     } catch (error) {
         logger.error('Error getting API key by id', { error, id });

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { HttpError, HttpStatusCode } from '@vspl/core';
+import { logger } from '@vspl/core';
 
 /**
  * Middleware factory that validates a request against a Zod schema
@@ -18,28 +18,8 @@ export const validateRequestMiddleware = (schema: z.ZodSchema<any>) => {
 
             next();
         } catch (error) {
-            if (error instanceof z.ZodError) {
-                // Format validation errors
-                const formattedErrors = error.errors.reduce(
-                    (acc, err) => {
-                        const path = err.path.join('.');
-                        acc[path] = err.message;
-                        return acc;
-                    },
-                    {} as Record<string, string>,
-                );
-
-                next(
-                    new HttpError(
-                        HttpStatusCode.BAD_REQUEST,
-                        'Validation error',
-                        'VALIDATION_ERROR',
-                        { errors: formattedErrors },
-                    ),
-                );
-            } else {
-                next(error);
-            }
+            logger.error('Validation error', { error });
+            next(error);
         }
     };
 };

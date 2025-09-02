@@ -3,15 +3,27 @@ import { ApiKeyController } from '../controllers/api-key.controller';
 import { validateRequest } from '../middlewares/validate-request';
 import { authenticate } from '../middlewares/authenticate';
 import {
-    CreateApiKeySchema,
-    UpdateApiKeySchema,
-    ApiKeyAuthSchema,
-} from '../../models/schemas/api-key';
+    CreateApiKeyValidator,
+    UpdateApiKeyValidator,
+    ApiKeyByIdValidator,
+    AuthenticateApiKeyValidator,
+} from '../validators/api-key.validator';
 
 export function createApiKeyRoutes(apiKeyController: ApiKeyController): Router {
     const router = Router();
 
-    // All API key management routes require authentication
+    /**
+     * @route POST /api-keys/authenticate
+     * @desc Authenticate with API key and get tokens
+     * @access Public (no authentication required)
+     */
+    router.post(
+        '/authenticate',
+        validateRequest(AuthenticateApiKeyValidator),
+        apiKeyController.authenticateWithApiKey.bind(apiKeyController),
+    );
+
+    // All other API key management routes require authentication
     router.use(authenticate);
 
     /**
@@ -21,7 +33,7 @@ export function createApiKeyRoutes(apiKeyController: ApiKeyController): Router {
      */
     router.post(
         '/',
-        validateRequest(CreateApiKeySchema),
+        validateRequest(CreateApiKeyValidator),
         apiKeyController.createApiKey.bind(apiKeyController),
     );
 
@@ -44,7 +56,11 @@ export function createApiKeyRoutes(apiKeyController: ApiKeyController): Router {
      * @desc Get API key details by ID
      * @access Private
      */
-    router.get('/:id', apiKeyController.getApiKey.bind(apiKeyController));
+    router.get(
+        '/:id',
+        validateRequest(ApiKeyByIdValidator),
+        apiKeyController.getApiKey.bind(apiKeyController),
+    );
 
     /**
      * @route PUT /api-keys/:id
@@ -53,7 +69,7 @@ export function createApiKeyRoutes(apiKeyController: ApiKeyController): Router {
      */
     router.put(
         '/:id',
-        validateRequest(UpdateApiKeySchema),
+        validateRequest(UpdateApiKeyValidator),
         apiKeyController.updateApiKey.bind(apiKeyController),
     );
 
@@ -62,24 +78,10 @@ export function createApiKeyRoutes(apiKeyController: ApiKeyController): Router {
      * @desc Deactivate API key
      * @access Private
      */
-    router.delete('/:id', apiKeyController.deleteApiKey.bind(apiKeyController));
-
-    /**
-     * @route POST /api-keys/:id/regenerate
-     * @desc Regenerate API key (create new key, deactivate old one)
-     * @access Private
-     */
-    router.post('/:id/regenerate', apiKeyController.createApiKey.bind(apiKeyController));
-
-    /**
-     * @route POST /api-keys/authenticate
-     * @desc Authenticate with API key and get tokens
-     * @access Public
-     */
-    router.post(
-        '/authenticate',
-        validateRequest(ApiKeyAuthSchema),
-        apiKeyController.authenticateWithApiKey.bind(apiKeyController),
+    router.delete(
+        '/:id',
+        validateRequest(ApiKeyByIdValidator),
+        apiKeyController.deleteApiKey.bind(apiKeyController),
     );
 
     return router;

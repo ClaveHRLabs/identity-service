@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction, logger, HttpError, HttpStatusCode } from '@vspl/core';
 import { ApiKeyService } from '../../services/api-key.service';
+import { getClientIp } from '../../utils/ip';
 
 /**
  * Middleware to authenticate requests using API keys
@@ -32,11 +33,7 @@ export function createApiKeyAuthMiddleware(apiKeyService: ApiKeyService) {
             }
 
             // Get client IP for tracking and IP whitelist validation
-            const clientIp =
-                req.ip ||
-                req.connection.remoteAddress ||
-                (req.headers['x-forwarded-for'] as string) ||
-                (req.headers['x-real-ip'] as string);
+            const clientIp = getClientIp(req);
 
             // Authenticate with API key
             const authResult = await apiKeyService.authenticateWithApiKey(apiKey, clientIp);

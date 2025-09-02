@@ -23,7 +23,11 @@ export const ApiKeySchema = z.object({
 export const CreateApiKeySchema = z.object({
     name: z.string().min(1, 'API key name is required').max(100),
     description: z.string().max(500).optional(),
-    expires_at: z.date().optional(), // NULL means never expires
+    expires_at: z
+        .string()
+        .datetime('Invalid date format')
+        .transform((str) => new Date(str))
+        .optional(), // NULL means never expires
     rate_limit_per_minute: z.number().int().min(1).max(1000).optional(),
     allowed_ips: z.array(z.string().ip()).optional(),
     metadata: z.record(z.any()).optional(),
@@ -34,7 +38,11 @@ export const UpdateApiKeySchema = z.object({
     name: z.string().min(1).max(100).optional(),
     description: z.string().max(500).optional(),
     is_active: z.boolean().optional(),
-    expires_at: z.date().optional(), // NULL means never expires
+    expires_at: z
+        .string()
+        .datetime('Invalid date format')
+        .transform((str) => new Date(str))
+        .optional(), // NULL means never expires
     rate_limit_per_minute: z.number().int().min(1).max(1000).optional(),
     allowed_ips: z.array(z.string().ip()).optional(),
     metadata: z.record(z.any()).optional(),
@@ -42,7 +50,10 @@ export const UpdateApiKeySchema = z.object({
 
 // Schema for API key authentication
 export const ApiKeyAuthSchema = z.object({
-    api_key: z.string().min(1, 'API key is required'),
+    api_key: z
+        .string()
+        .min(1, 'API key is required')
+        .regex(/^xapi-[a-f0-9]{32}$/, 'Invalid API key format'),
 });
 
 // Schema for regenerating API key

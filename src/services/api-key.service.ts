@@ -95,7 +95,7 @@ export class ApiKeyService {
      * Get API key details by ID
      */
     async getApiKeyDetails(userId: string, apiKeyId: string): Promise<ApiKeyListResponse | null> {
-        const apiKey = await apiKeyRepository.getApiKeyById(apiKeyId);
+        const apiKey = await apiKeyRepository.getApiKeyById(apiKeyId, userId);
 
         if (!apiKey || apiKey.user_id !== userId) {
             return null;
@@ -123,26 +123,14 @@ export class ApiKeyService {
         data: UpdateApiKey,
     ): Promise<ApiKeyListResponse | null> {
         // Verify ownership
-        const existingKey = await apiKeyRepository.getApiKeyById(apiKeyId);
-        if (!existingKey || existingKey.user_id !== userId) {
+        const existingKey = await apiKeyRepository.getApiKeyById(apiKeyId, userId);
+
+        if (!existingKey) {
             throw new HttpError(HttpStatusCode.NOT_FOUND, 'API key not found');
         }
 
-        // Check for duplicate names if name is being changed
-        if (data.name && data.name !== existingKey.name) {
-            const existingKeys = await apiKeyRepository.getApiKeysByUserId(userId, true);
-            const duplicateName = existingKeys.find(
-                (key) => key.name === data.name && key.id !== apiKeyId,
-            );
-            if (duplicateName) {
-                throw new HttpError(
-                    HttpStatusCode.CONFLICT,
-                    'API key name already exists for this user',
-                );
-            }
-        }
-
         const updatedKey = await apiKeyRepository.updateApiKey(apiKeyId, data);
+
         if (!updatedKey) {
             return null;
         }
