@@ -38,7 +38,7 @@ export const registerRoutes = (
     app.use(`${apiPrefix}/users`, userRouter);
     app.use(`${apiPrefix}/auth`, authRouter);
     app.use(`${apiPrefix}/roles`, roleRouter);
-    app.use(`${apiPrefix}/api-keys`, apiKeyRouter);
+    app.use(`${apiPrefix}/xkey`, apiKeyRouter);
 
     // Register the route for getting all setup codes for an organization
     // This is defined here because it uses both organization and setup code routes
