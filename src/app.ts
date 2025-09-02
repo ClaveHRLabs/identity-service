@@ -1,4 +1,4 @@
-import { logger, setupGracefulShutdown, closePool } from '@vspl/core';
+import { logger, setupGracefulShutdown, closePool, createErrorHandler } from '@vspl/core';
 import { initializeContainer, getDependency, SERVICE_NAMES } from './di';
 import { Express } from 'express';
 import { Pool } from 'pg';
@@ -15,6 +15,11 @@ async function startServer() {
         const config = getDependency<IdentityConfig>(SERVICE_NAMES.CONFIG);
         const app = getDependency<Express>(SERVICE_NAMES.EXPRESS_APP);
         const dbPool = getDependency<Pool>(SERVICE_NAMES.DB_POOL);
+
+        // setup the error controller
+        app.use(createErrorHandler({
+            includeStackTrace: config.SHOW_ERROR_STACK,
+        }));
 
         // Start server
         const server = app.listen(config.PORT, () => {

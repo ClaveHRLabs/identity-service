@@ -21,6 +21,7 @@ import { UserController } from '../api/controllers/user.controller';
 import { AuthController } from '../api/controllers/auth.controller';
 import { OrganizationController } from '../api/controllers/organization.controller';
 import { SetupCodeController } from '../api/controllers/setup-code.controller';
+import { RoleController } from '../api/controllers/role.controller';
 
 // Middleware and routes
 import { registerRoutes } from '../api/routes';
@@ -96,7 +97,9 @@ export async function initializeContainer(): Promise<void> {
     appContainer.register(
         SERVICE_NAMES.SETUP_CODE_SERVICE,
         () => {
-            const organizationService = appContainer.get<OrganizationService>(SERVICE_NAMES.ORGANIZATION_SERVICE);
+            const organizationService = appContainer.get<OrganizationService>(
+                SERVICE_NAMES.ORGANIZATION_SERVICE,
+            );
             return new SetupCodeService(organizationService);
         },
         { dependencies: [SERVICE_NAMES.ORGANIZATION_SERVICE] },
@@ -129,7 +132,14 @@ export async function initializeContainer(): Promise<void> {
             const config = appContainer.get<IdentityConfig>(SERVICE_NAMES.CONFIG);
             return new AuthService(userService, emailService, httpClient, config);
         },
-        { dependencies: [SERVICE_NAMES.USER_SERVICE, SERVICE_NAMES.EMAIL_SERVICE, SERVICE_NAMES.HTTP_CLIENT, SERVICE_NAMES.CONFIG] },
+        {
+            dependencies: [
+                SERVICE_NAMES.USER_SERVICE,
+                SERVICE_NAMES.EMAIL_SERVICE,
+                SERVICE_NAMES.HTTP_CLIENT,
+                SERVICE_NAMES.CONFIG,
+            ],
+        },
     );
 
     // 7. Controllers
@@ -153,7 +163,9 @@ export async function initializeContainer(): Promise<void> {
     appContainer.register(
         SERVICE_NAMES.ORGANIZATION_CONTROLLER,
         () => {
-            const organizationService = appContainer.get<OrganizationService>(SERVICE_NAMES.ORGANIZATION_SERVICE);
+            const organizationService = appContainer.get<OrganizationService>(
+                SERVICE_NAMES.ORGANIZATION_SERVICE,
+            );
             const roleService = appContainer.get<RoleService>(SERVICE_NAMES.ROLE_SERVICE);
             return new OrganizationController(organizationService, roleService);
         },
@@ -162,10 +174,20 @@ export async function initializeContainer(): Promise<void> {
     appContainer.register(
         SERVICE_NAMES.SETUP_CODE_CONTROLLER,
         () => {
-            const setupCodeService = appContainer.get<SetupCodeService>(SERVICE_NAMES.SETUP_CODE_SERVICE);
+            const setupCodeService = appContainer.get<SetupCodeService>(
+                SERVICE_NAMES.SETUP_CODE_SERVICE,
+            );
             return new SetupCodeController(setupCodeService);
         },
         { dependencies: [SERVICE_NAMES.SETUP_CODE_SERVICE] },
+    );
+    appContainer.register(
+        SERVICE_NAMES.ROLE_CONTROLLER,
+        () => {
+            const roleService = appContainer.get<RoleService>(SERVICE_NAMES.ROLE_SERVICE);
+            return new RoleController(roleService);
+        },
+        { dependencies: [SERVICE_NAMES.ROLE_SERVICE] },
     );
 
     // 8. Express Application
@@ -224,6 +246,7 @@ export async function initializeContainer(): Promise<void> {
                 appContainer.get(SERVICE_NAMES.SETUP_CODE_CONTROLLER),
                 appContainer.get(SERVICE_NAMES.USER_CONTROLLER),
                 appContainer.get(SERVICE_NAMES.AUTH_CONTROLLER),
+                appContainer.get(SERVICE_NAMES.ROLE_CONTROLLER),
                 config.API_PREFIX,
             );
 
@@ -238,6 +261,7 @@ export async function initializeContainer(): Promise<void> {
                 SERVICE_NAMES.SETUP_CODE_CONTROLLER,
                 SERVICE_NAMES.USER_CONTROLLER,
                 SERVICE_NAMES.AUTH_CONTROLLER,
+                SERVICE_NAMES.ROLE_CONTROLLER,
             ],
         },
     );

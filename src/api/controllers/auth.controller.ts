@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../../services/auth.service';
-import { Measure, HttpStatusCode, logger } from '@vspl/core';
+import { Measure, HttpStatusCode, logger, CatchErrors } from '@vspl/core';
 import { AUTH } from '../../constants/app.constants';
 import { IdentityConfig } from '../../config/config';
 
@@ -13,7 +13,8 @@ export class AuthController {
     /**
      * Initiate Google OAuth flow by generating the authorization URL
      */
-    @Measure()
+    @CatchErrors({ rethrow: false })
+    @Measure({ metricName: 'initiateGoogleAuth', logLevel: 'info' })
     async initiateGoogleAuth(req: Request, res: Response): Promise<void> {
         const { redirect_uri, state_data } = req.query;
 
@@ -48,7 +49,8 @@ export class AuthController {
     /**
      * Initiate Microsoft OAuth flow by generating the authorization URL
      */
-    @Measure()
+    @CatchErrors({ rethrow: false })
+    @Measure({ metricName: 'initiateMicrosoftAuth', logLevel: 'info' })
     async initiateMicrosoftAuth(req: Request, res: Response): Promise<void> {
         const { redirect_uri, state_data } = req.query;
 
@@ -84,7 +86,8 @@ export class AuthController {
      * Authenticate with Google OAuth
      */
 
-    @Measure()
+    @CatchErrors({ rethrow: false })
+    @Measure({ metricName: 'googleAuth', logLevel: 'info' })
     async googleAuth(req: Request, res: Response): Promise<void> {
         const { code, redirect_uri, state } = req.body;
         const result = await this.authService.authenticateWithGoogle(code, redirect_uri, state);
@@ -99,7 +102,8 @@ export class AuthController {
      * Authenticate with Microsoft OAuth
      */
 
-    @Measure()
+    @CatchErrors({ rethrow: false })
+    @Measure({ metricName: 'microsoftAuth', logLevel: 'info' })
     async microsoftAuth(req: Request, res: Response): Promise<void> {
         const { code, redirect_uri, state } = req.body;
         const result = await this.authService.authenticateWithMicrosoft(code, redirect_uri, state);
@@ -113,8 +117,8 @@ export class AuthController {
     /**
      * Send a magic link to the user's email
      */
-
-    @Measure()
+    @CatchErrors({ rethrow: false })
+    @Measure({ metricName: 'sendMagicLink', logLevel: 'info' })
     async sendMagicLink(req: Request, res: Response): Promise<void> {
         const { email, redirect_uri } = req.body;
         await this.authService.sendMagicLink(email, redirect_uri);
@@ -129,7 +133,8 @@ export class AuthController {
      * Verify a magic link token and authenticate the user
      */
 
-    @Measure()
+    @CatchErrors({ rethrow: false })
+    @Measure({ metricName: 'verifyMagicLink', logLevel: 'info' })
     async verifyMagicLink(req: Request, res: Response): Promise<void> {
         const { token } = req.body;
         const result = await this.authService.verifyMagicLink(token);
@@ -161,7 +166,8 @@ export class AuthController {
      * Refresh the access token using a refresh token
      */
 
-    @Measure()
+    @CatchErrors({ rethrow: false })
+    @Measure({ metricName: 'refreshToken', logLevel: 'info' })
     async refreshToken(req: Request, res: Response): Promise<void> {
         const { refresh_token } = req.body;
         const result = await this.authService.refreshToken(refresh_token);
@@ -185,8 +191,8 @@ export class AuthController {
     /**
      * Logout the user by revoking their refresh token
      */
-
-    @Measure()
+    @CatchErrors({ rethrow: false })
+    @Measure({ metricName: 'initiateGoogleAuth', logLevel: 'info' })
     async logout(req: Request, res: Response): Promise<void> {
         const { refresh_token } = req.body;
 
@@ -207,7 +213,8 @@ export class AuthController {
     /**
      * Initiate LinkedIn OAuth flow by generating the authorization URL
      */
-
+    @CatchErrors({ rethrow: false })
+    @Measure({ metricName: 'initiateLinkedInAuth', logLevel: 'info' })
     async initiateLinkedInAuth(req: Request, res: Response): Promise<void> {
         const { redirect_uri, state_data } = req.query;
 
@@ -243,7 +250,8 @@ export class AuthController {
      * Authenticate with LinkedIn OAuth
      */
 
-    @Measure()
+    @CatchErrors({ rethrow: false })
+    @Measure({ metricName: 'linkedInAuth', logLevel: 'info' })
     async linkedInAuth(req: Request, res: Response): Promise<void> {
         const { code, redirect_uri, state } = req.body;
 
@@ -283,7 +291,8 @@ export class AuthController {
     /**
      * Debug endpoint for LinkedIn configuration (only available in development)
      */
-    @Measure()
+    @CatchErrors({ rethrow: false })
+    @Measure({ metricName: 'debugLinkedInConfig', logLevel: 'info' })
     async debugLinkedInConfig(req: Request, res: Response): Promise<void> {
         // Only allow this in development environment
         if (!this.config.IS_DEVELOPMENT) {

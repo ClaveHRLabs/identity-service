@@ -1,4 +1,3 @@
-import { Router } from 'express';
 import { SetupCodeController } from '../controllers/setup-code.controller';
 import { validateRequest } from '../middlewares/validate-request';
 import { verifyAdminOrOperator } from '../middlewares/admin-auth';
@@ -9,6 +8,7 @@ import {
     ValidateSetupCodeValidator,
     DeleteSetupCodeValidator,
 } from '../validators/organization.validator';
+import { Router } from '@vspl/core';
 
 export const createSetupCodeRoutes = (setupCodeController: SetupCodeController) => {
     const router = Router();

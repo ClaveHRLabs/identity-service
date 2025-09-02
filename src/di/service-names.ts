@@ -28,6 +28,7 @@ export const SERVICE_NAMES = {
     AUTH_CONTROLLER: 'authController',
     ORGANIZATION_CONTROLLER: 'organizationController',
     SETUP_CODE_CONTROLLER: 'setupCodeController',
+    ROLE_CONTROLLER: 'roleController',
 
     // Application
     EXPRESS_APP: 'app',
