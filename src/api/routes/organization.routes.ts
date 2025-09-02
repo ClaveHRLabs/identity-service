@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { OrganizationController } from '../controllers/organization.controller';
 import { validateRequest } from '../middlewares/validate-request';
 import { extractSetupCode } from '../middlewares/setup-code';
-import { authenticate } from '../middlewares/authenticate';
+import { authenticate } from '../middlewares/auth';
 import { authorize } from '../middlewares/authorize';
 import {
     CreateOrganizationProfileValidator,

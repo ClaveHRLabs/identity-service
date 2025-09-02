@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller';
 import { validateRequest } from '../middlewares/validate-request';
-import { authenticate, loadUser } from '../middlewares/authenticate';
+import { authenticate } from '../middlewares/auth';
 import { authorize } from '../middlewares/authorize';
 import { serviceAuth } from '../middlewares/service-auth'; // Import the service auth middleware
 import {
@@ -31,7 +31,6 @@ export const createUserRoutes = (userController: UserController) => {
     router.get(
         '/me',
         authenticate,
-        loadUser,
         validateRequest(GetCurrentUserValidator),
         userController.getCurrentUser.bind(userController),
     );
@@ -41,6 +40,7 @@ export const createUserRoutes = (userController: UserController) => {
         '/:id',
         serviceAuth, // Add service auth middleware
         authenticate,
+        authorize(Permission.VIEW_ALL_USERS),
         validateRequest(GetUserValidator),
         userController.getUser.bind(userController),
     );

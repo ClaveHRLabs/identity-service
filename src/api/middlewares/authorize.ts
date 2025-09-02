@@ -1,10 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { RoleService } from '../../services/role.service';
-import { HttpError, HttpStatusCode } from '@vspl/core';
-import { logger } from '@vspl/core';
-
-// Initialize the role service
-const roleService = new RoleService();
+import { derivePermissions, HttpError, HttpStatusCode } from '@vspl/core';
+import { logger, Request, Response, NextFunction } from '@vspl/core';
 
 /**
  * Middleware to check if a user has the required permission
@@ -24,28 +19,12 @@ export const authorizeMiddleware = (requiredPermission: string) => {
             }
 
             // If this is a service request that has set permissions, check those directly
-            if (req.isServiceRequest === true && (req as any).permissions) {
-                // Check if the required permission exists in the permissions array
-                if ((req as any).permissions.includes(requiredPermission)) {
-                    logger.debug('Permission granted via service auth', {
-                        requiredPermission,
-                        path: req.path,
-                    });
-                    return next();
-                }
-
-                logger.warn('Service request permission denied', {
+            if (req.isServiceRequest === true) {
+                logger.debug('Service request permission granted', {
                     requiredPermission,
-                    userPermissions: (req as any).permissions,
                     path: req.path,
                 });
-
-                return next(
-                    new HttpError(
-                        HttpStatusCode.FORBIDDEN,
-                        'You do not have permission to perform this action',
-                    ),
-                );
+                return next();
             }
 
             // Get user ID from request (set by authentication middleware)
@@ -54,17 +33,18 @@ export const authorizeMiddleware = (requiredPermission: string) => {
                 return next(new HttpError(HttpStatusCode.UNAUTHORIZED, 'Unauthorized'));
             }
 
-            // Get organization ID from request if available
-            const organizationId = req.body.organization_id || req.query.organizationId?.toString();
+            const user = req.user;
+            const organizationId = user?.organizationId;
 
-            // Check if user has the required permission
-            const hasPermission = await roleService.checkUserPermission(
+            logger.debug('Checking permission', {
                 userId,
                 requiredPermission,
                 organizationId,
-            );
+                roles: user?.roles,
+                permissions: derivePermissions(user?.roles),
+            });
 
-            if (!hasPermission) {
+            if (!derivePermissions(user?.roles).includes(requiredPermission)) {
                 logger.warn('Permission denied', {
                     userId,
                     requiredPermission,

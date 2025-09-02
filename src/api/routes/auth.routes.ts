@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
 import { validateRequest } from '../middlewares/validate-request';
-import { authenticate } from '../middlewares/authenticate';
+import { authenticate } from '../middlewares/auth';
 import {
     GoogleAuthValidator,
     MicrosoftAuthValidator,

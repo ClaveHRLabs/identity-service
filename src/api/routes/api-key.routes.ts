@@ -1,7 +1,7 @@
 import { Router } from '@vspl/core';
 import { ApiKeyController } from '../controllers/api-key.controller';
 import { validateRequest } from '../middlewares/validate-request';
-import { authenticate } from '../middlewares/authenticate';
+import { authenticate } from '../middlewares/auth';
 import {
     CreateApiKeyValidator,
     UpdateApiKeyValidator,

@@ -1,6 +1,6 @@
 import { SetupCodeController } from '../controllers/setup-code.controller';
 import { validateRequest } from '../middlewares/validate-request';
-import { authenticate } from '../middlewares/authenticate';
+import { authenticate } from '../middlewares/auth';
 import { addSetupCodeHeader } from '../middlewares/setup-code';
 import {
     CreateSetupCodeValidator,

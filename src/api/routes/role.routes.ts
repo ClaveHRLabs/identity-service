@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { validateRequest } from '../middlewares/validate-request';
-import { authenticate } from '../middlewares/authenticate';
+import { authenticate } from '../middlewares/auth';
 import { authorize } from '../middlewares/authorize';
 import {
     validateRoleAssignment,
@@ -33,7 +33,7 @@ export const createRoleRoutes = (roleController: RoleController) => {
         '/',
         serviceAuth, // Add service auth
         authenticate,
-        authorize('view_all_users'),
+        authorize(Permission.VIEW_ALL_USERS),
         validateRequest(ListRolesValidator),
         roleController.getRoles.bind(roleController),
     );
@@ -43,6 +43,7 @@ export const createRoleRoutes = (roleController: RoleController) => {
         serviceAuth, // Add service auth
         authenticate,
         getAssignableRoles,
+        authorize(Permission.MANAGE_ROLES),
         roleController.getAssignableRoles.bind(roleController),
     );
 
@@ -89,7 +90,7 @@ export const createRoleRoutes = (roleController: RoleController) => {
         '/user/:userId',
         serviceAuth, // Add service auth
         authenticate,
-        authorize(Permission.VIEW_ALL_USERS),
+        authorize(Permission.MANAGE_USERS),
         validateRequest(GetUserRolesValidator),
         roleController.getRoles.bind(roleController), // TODO: implement getUserRoles
     );
